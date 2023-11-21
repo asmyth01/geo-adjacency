@@ -1,0 +1,9 @@
+- name: Build and publish to pypi
+  uses: JRubics/poetry-publish@v1.17
+  with:
+    python_version: ["3.9", "3.10", "3.11", "3.12"]
+    poetry_version: "==1.0.5" # (PIP version specifier syntax)
+    pypi_token: ${{ secrets.PYPI_TOKEN }}
+    build_format: "sdist"
+    allow_poetry_pre_release: "yes"
+    ignore_dev_requirements: "yes"
