@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "geo-adjacency"
+version = "0.1.0"
+description = ""
+authors = ["Andrew Smyth <andrews@zillowgroup.com>"]
+readme = "README.md"
+packages = [{include = "geo_adjacency"}]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "<3.13,>=3.9"
+scipy = "^1.11.3"
+shapely = "^2.0.2"
+numpy = "^1.26.2"
+matplotlib = "^3.8.1"
+setuptools = "^69.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
