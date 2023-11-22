@@ -1,11 +1,11 @@
 from typing import Tuple, List
 
-from shapely import Geometry
+from shapely.geometry.base import BaseGeometry
 from shapely.wkt import loads
 import os
 
 
-def load_test_geoms(test_data_dir) -> Tuple[List[Geometry], List[Geometry], List[Geometry]]:
+def load_test_geoms(test_data_dir) -> Tuple[List[BaseGeometry], List[BaseGeometry], List[BaseGeometry]]:
     """
     Load some test data
     """

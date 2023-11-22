@@ -1,13 +1,13 @@
 from collections import defaultdict
 
+from matplotlib import pyplot as plt
+from scipy.spatial import voronoi_plot_2d
+
 from geo_adjacency import adjacency
 from geo_adjacency.utils import flatten_list
 from tests.testUtils import load_test_geoms
 
-source_geoms, target_geoms, sample_obstacles = load_test_geoms("sample_data")
-
-
-ENGINE = adjacency.AdjacencyEngine(source_geoms, target_geoms, sample_obstacles)
+source_geoms, target_geoms, obstacle_geoms = load_test_geoms("sample_data")
 
 
 def test_flatten_list():
@@ -15,7 +15,8 @@ def test_flatten_list():
 
 
 def test_get_adjacency_matrix():
-    actual = ENGINE.get_adjacency_matrix()
-    expected = {0: [1, 2], 1: [1], 2: [1], 3: [2], 4: [0], 5: [0], 6: [1], 7: [1], 8: [0], 9: [1]}
+    engine = adjacency.AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, True, 0.001)
+    actual = engine.get_adjacency_dict()
+    expected = {0: [4, 7], 1: [4], 3: [2, 3], 4: [3], 5: [3], 8: [4], 9: [0], 13: [2], 15: [3], 16: [0], 17: [0, 7]}
     assert actual == expected
 

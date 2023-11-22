@@ -4,9 +4,9 @@ import time
 from collections import defaultdict
 from typing import List, Union, Dict, Tuple
 
-from scipy.spatial import distance
+from scipy.spatial import distance, voronoi_plot_2d
 from scipy.spatial import Voronoi
-from shapely import Polygon, MultiPolygon, LineString
+from shapely import Polygon, MultiPolygon, LineString, Point
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import nearest_points
 from shapely.wkt import loads
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import logging
 
 from geo_adjacency.exception import ImmutablePropertyError
-from geo_adjacency.utils import flatten_list
+from geo_adjacency.utils import flatten_list, add_geometry_to_plot
 
 # Create a custom logger
 logger = logging.getLogger(__name__)
@@ -70,11 +70,16 @@ class _Feature:
         :return: List[Tuple[float, float]]: A list of coordinate tuples.
         """
         if not self._coords:
-            if isinstance(self.geometry, Polygon) or isinstance(self.geometry, MultiPolygon):
+            if isinstance(self.geometry, Point):
+                self._coords = [(self.geometry.x, self.geometry.y)]
+            elif isinstance(self.geometry, Polygon):
                 self._coords = mapping(self.geometry)['coordinates'][0]
+            elif isinstance(self.geometry, MultiPolygon):
+                self._coords = flatten_list(mapping(self.geometry)['coordinates'][0])
             elif isinstance(self.geometry, LineString):
                 self._coords = [(x, y) for x, y in self.geometry.coords]
-
+            else:
+                raise TypeError(f"Unknown geometry type '{type(self.geometry)}'")
         return self._coords
 
 
@@ -116,8 +121,11 @@ class AdjacencyEngine:
         self._feature_indices = None
         self._vor = None
 
-        self.all_features = [*self.source_features, *self.target_features,
-                             *self.obstacle_features]  # ToDo: Update this if any features are added
+        self.all_features: List[_Feature] = [
+            *self.source_features,
+            *self.target_features,
+            *self.obstacle_features
+        ]
 
         if densify_features:
             if max_segment_length is None:
@@ -197,7 +205,7 @@ class AdjacencyEngine:
     def vor(self, _):
         raise ImmutablePropertyError("Property vor is immutable.")
 
-    def get_adjacency_matrix(self) -> Dict[int, List[int]]:
+    def get_adjacency_dict(self) -> Dict[int, List[int]]:
         """
         Returns a dictionary of indices. They keys are the indices of feature_geoms. The values are the indices of any
         target geometries which are adjacent to the feature_geoms.
@@ -207,7 +215,6 @@ class AdjacencyEngine:
         """
 
         if self._adjacency_matrix is None:
-
             # We don't need to tag obstacles with their voronoi vertices
             obstacle_coord_len = sum(len(feat.coords) for feat in self.obstacle_features)
 
@@ -231,29 +238,19 @@ class AdjacencyEngine:
 
         return self._adjacency_matrix
 
-    def plot_adjacency_matrix(self):
-        for source_i, target_is in self.get_adjacency_matrix().items():
+    def plot_adjacency_dict(self):
+        # Plot the adjacency linkages between the source and target
+        for source_i, target_is in self.get_adjacency_dict().items():
             source_poly = self.source_features[source_i].geometry
             target_polys = [self.target_features[target_i].geometry for target_i in target_is]
 
-            plt.plot(*source_poly.exterior.xy, color="grey")
-
             # Plot the linestrings between the source and target polygons
-            for target_poly in target_polys:
-                linestring = LineString([nearest_points(source_poly, target_poly)[1], source_poly.centroid])
-                plt.plot(*linestring.xy, color="green")
+            links = [LineString([nearest_points(source_poly, target_poly)[1], source_poly.centroid]) for target_poly in target_polys]
+            add_geometry_to_plot(links, "green")
 
-        for target_poly in self.target_features:
-            plt.plot(*target_poly.geometry.exterior.xy, color="blue")
-
-        # Plot the rest of the source features
-        for i, source_poly in enumerate(self.source_features):
-            if i not in self.get_adjacency_matrix().keys():
-                plt.plot(*source_poly.geometry.exterior.xy, color="grey")
-
-        for obstacle_poly in self.obstacle_features:
-            if isinstance(obstacle_poly.geometry, LineString):
-                plt.plot(*obstacle_poly.geometry.coords.xy, color="red")
+        add_geometry_to_plot([t.geometry for t in self.target_features], "blue")
+        add_geometry_to_plot([t.geometry for t in self.source_features], "grey")
+        add_geometry_to_plot([t.geometry for t in self.obstacle_features], "red")
 
         plt.title("Adjacency linkages between source and target")
         plt.xlabel("Longitude")
@@ -282,12 +279,14 @@ def load_test_geoms(test_data_dir) -> Tuple[List[BaseGeometry], List[BaseGeometr
 
 if __name__ == "__main__":
     s, t, o = load_test_geoms("../tests/sample_data")
-    engine = AdjacencyEngine(s , t, o, True)
+    engine = AdjacencyEngine(s, t, o, True, 0.001)
+    fig = voronoi_plot_2d(engine.vor)
+    plt.show()
     start = time.time()
-    print(engine.get_adjacency_matrix())
+    print(engine.get_adjacency_dict())
     print("elapsed time: ", time.time() - start)
 
 
-    engine.plot_adjacency_matrix()
+    engine.plot_adjacency_dict()
 
 
