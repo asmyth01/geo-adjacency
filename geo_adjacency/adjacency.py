@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 
 # Create handlers
 c_handler = logging.StreamHandler()
-f_handler = logging.FileHandler('file.log')
+f_handler = logging.FileHandler("file.log")
 c_handler.setLevel(logging.WARNING)
 f_handler.setLevel(logging.ERROR)
 
 # Create formatters and add it to handlers
-c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+c_format = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+f_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 c_handler.setFormatter(c_format)
 f_handler.setFormatter(f_format)
 
@@ -73,9 +73,9 @@ class _Feature:
             if isinstance(self.geometry, Point):
                 self._coords = [(self.geometry.x, self.geometry.y)]
             elif isinstance(self.geometry, Polygon):
-                self._coords = mapping(self.geometry)['coordinates'][0]
+                self._coords = mapping(self.geometry)["coordinates"][0]
             elif isinstance(self.geometry, MultiPolygon):
-                self._coords = flatten_list(mapping(self.geometry)['coordinates'][0])
+                self._coords = flatten_list(mapping(self.geometry)["coordinates"][0])
             elif isinstance(self.geometry, LineString):
                 self._coords = [(x, y) for x, y in self.geometry.coords]
             else:
@@ -92,9 +92,14 @@ class AdjacencyEngine:
     voronoi shapes intersect one another. If they do, then the two underlying geometries are adjacent.
     """
 
-    def __init__(self, source_geoms: List[BaseGeometry], target_geoms: List[BaseGeometry],
-                 obstacle_geoms: Union[List[BaseGeometry], None] = None, densify_features: bool = False,
-                 max_segment_length: Union[float, None] = None):
+    def __init__(
+        self,
+        source_geoms: List[BaseGeometry],
+        target_geoms: List[BaseGeometry],
+        obstacle_geoms: Union[List[BaseGeometry], None] = None,
+        densify_features: bool = False,
+        max_segment_length: Union[float, None] = None,
+    ):
         """
         Note: only Multipolygons, Polygons, and LineStrings are supported. It is assumed all features are in the same
         projection.
@@ -112,11 +117,19 @@ class AdjacencyEngine:
         """
 
         if max_segment_length and not densify_features:
-            raise ValueError("interpolate_points must be True if interpolation_distance is not None")
+            raise ValueError(
+                "interpolate_points must be True if interpolation_distance is not None"
+            )
 
-        self._source_features: List[_Feature] = [_Feature(geom) for geom in source_geoms]
-        self._target_features: List[_Feature] = [_Feature(geom) for geom in target_geoms]
-        self._obstacle_features: Union[List[_Feature], None] = [_Feature(geom) for geom in obstacle_geoms]
+        self._source_features: List[_Feature] = [
+            _Feature(geom) for geom in source_geoms
+        ]
+        self._target_features: List[_Feature] = [
+            _Feature(geom) for geom in target_geoms
+        ]
+        self._obstacle_features: Union[List[_Feature], None] = [
+            _Feature(geom) for geom in obstacle_geoms
+        ]
         self._adjacency_matrix = None
         self._feature_indices = None
         self._vor = None
@@ -124,7 +137,7 @@ class AdjacencyEngine:
         self.all_features: List[_Feature] = [
             *self.source_features,
             *self.target_features,
-            *self.obstacle_features
+            *self.obstacle_features,
         ]
 
         if densify_features:
@@ -135,7 +148,9 @@ class AdjacencyEngine:
             for feature in self.all_features:
                 feature.geometry = feature.geometry.segmentize(max_segment_length)
 
-        self.all_coordinates = flatten_list([feature.coords for feature in self.all_features])
+        self.all_coordinates = flatten_list(
+            [feature.coords for feature in self.all_features]
+        )
 
     def calc_segmentation_dist(self, divisor=5):
         """
@@ -150,8 +165,16 @@ class AdjacencyEngine:
         :return:
         """
 
-        all_coordinates = flatten_list([feature.coords for feature in self.all_features])
-        return float((sum(distance.pdist(all_coordinates, 'euclidean')) / math.pow(len(all_coordinates), 2)) / divisor)
+        all_coordinates = flatten_list(
+            [feature.coords for feature in self.all_features]
+        )
+        return float(
+            (
+                sum(distance.pdist(all_coordinates, "euclidean"))
+                / math.pow(len(all_coordinates), 2)
+            )
+            / divisor
+        )
 
     @property
     def source_features(self) -> List[_Feature]:
@@ -216,12 +239,16 @@ class AdjacencyEngine:
 
         if self._adjacency_matrix is None:
             # We don't need to tag obstacles with their voronoi vertices
-            obstacle_coord_len = sum(len(feat.coords) for feat in self.obstacle_features)
+            obstacle_coord_len = sum(
+                len(feat.coords) for feat in self.obstacle_features
+            )
 
             # Tag each feature with the vertices of the voronoi region it belongs to
             for coord_index in range(len(self.all_coordinates) - obstacle_coord_len):
                 feature = self.get_feature_from_coord_index(coord_index)
-                for vor_vertex_index in self.vor.regions[self.vor.point_region[coord_index]]:
+                for vor_vertex_index in self.vor.regions[
+                    self.vor.point_region[coord_index]
+                ]:
                     # "-1" indices indicate the vertex goes to infinity. These don't provide us with adjacency
                     # information, so we ignore them.
                     if vor_vertex_index != -1:
@@ -233,7 +260,13 @@ class AdjacencyEngine:
 
             for coord_index, source_feature in enumerate(self.source_features):
                 for vor_region_index, target_feature in enumerate(self.target_features):
-                    if len(source_feature.voronoi_points & target_feature.voronoi_points) > 1:
+                    if (
+                        len(
+                            source_feature.voronoi_points
+                            & target_feature.voronoi_points
+                        )
+                        > 1
+                    ):
                         self._adjacency_matrix[coord_index].append(vor_region_index)
 
         return self._adjacency_matrix
@@ -242,10 +275,17 @@ class AdjacencyEngine:
         # Plot the adjacency linkages between the source and target
         for source_i, target_is in self.get_adjacency_dict().items():
             source_poly = self.source_features[source_i].geometry
-            target_polys = [self.target_features[target_i].geometry for target_i in target_is]
+            target_polys = [
+                self.target_features[target_i].geometry for target_i in target_is
+            ]
 
             # Plot the linestrings between the source and target polygons
-            links = [LineString([nearest_points(source_poly, target_poly)[1], source_poly.centroid]) for target_poly in target_polys]
+            links = [
+                LineString(
+                    [nearest_points(source_poly, target_poly)[1], source_poly.centroid]
+                )
+                for target_poly in target_polys
+            ]
             add_geometry_to_plot(links, "green")
 
         add_geometry_to_plot([t.geometry for t in self.target_features], "blue")
@@ -260,7 +300,9 @@ class AdjacencyEngine:
     # ToDo: Support geodataframes
 
 
-def load_test_geoms(test_data_dir) -> Tuple[List[BaseGeometry], List[BaseGeometry], List[BaseGeometry]]:
+def load_test_geoms(
+    test_data_dir,
+) -> Tuple[List[BaseGeometry], List[BaseGeometry], List[BaseGeometry]]:
     """
     Load some test data
     """
@@ -286,7 +328,4 @@ if __name__ == "__main__":
     print(engine.get_adjacency_dict())
     print("elapsed time: ", time.time() - start)
 
-
     engine.plot_adjacency_dict()
-
-

@@ -4,7 +4,6 @@ from shapely import Point, LineString, Polygon, MultiPolygon
 
 
 def flatten_list(list_of_lists):
-
     # return [item for sublist in list_of_lists for item in sublist]
     flattened_list = []
 
@@ -24,7 +23,14 @@ def add_geometry_to_plot(geoms, color="black"):
     """
     for geom in geoms:
         if isinstance(geom, Point):
-            plt.plot(geom.x, geom.y, marker="o", markersize=5, markeredgecolor="black", markerfacecolor=color)
+            plt.plot(
+                geom.x,
+                geom.y,
+                marker="o",
+                markersize=5,
+                markeredgecolor="black",
+                markerfacecolor=color,
+            )
         elif isinstance(geom, LineString):
             plt.plot(*geom.coords.xy, color=color)
         elif isinstance(geom, Polygon):
