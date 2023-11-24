@@ -17,6 +17,7 @@ setuptools = "^69.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"
+pylint = "^3.0.2"
 
 
 [build-system]

@@ -1,10 +1,17 @@
-import numpy as np
+"""
+Convenience functions.
+"""
+
 from matplotlib import pyplot as plt
 from shapely import Point, LineString, Polygon, MultiPolygon
 
 
 def flatten_list(list_of_lists):
-    # return [item for sublist in list_of_lists for item in sublist]
+    """
+    Flattens a list of lists.
+    :param list_of_lists: The list of lists.
+    :return: A flattened list.
+    """
     flattened_list = []
 
     for sublist in list_of_lists:
