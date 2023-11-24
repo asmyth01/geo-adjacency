@@ -18,7 +18,8 @@ jobs:
     steps:
       - name: Test with pytest
         run: |
-          dir ..${{ github.workspace }}
-          
+          cd  ${{ github.workspace }}
+          ls
+          cd ..
           pip install pytest
-          pytest ..${{ github.workspace }}/tests
+          pytest tests
