@@ -18,11 +18,7 @@ jobs:
     steps:
       - name: Test with pytest
         run: |
-          sudo apt-get install tree
-          tree
-          echo "Working directory: $(pwd)"
-          echo "Python version: $(python --version)"
-          ls /home/runner/work/geo-adjacency
+          ls ${{ github.workspace }}
           
           pip install pytest
-          pytest /home/runner/work/geo-adjacency/tests
+          pytest ${{ github.workspace }}/tests
