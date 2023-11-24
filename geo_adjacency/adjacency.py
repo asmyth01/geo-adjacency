@@ -11,7 +11,7 @@ from typing import List, Union, Dict, Tuple
 import logging
 
 from scipy.spatial import distance, voronoi_plot_2d
-from scipy.spatial import Voronoi
+import scipy.spatial
 from shapely import Polygon, MultiPolygon, LineString, Point
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import nearest_points
@@ -259,7 +259,7 @@ class AdjacencyEngine:
         :return: Voronoi object.
         """
         if not self._vor:
-            self._vor = Voronoi(np.array(self.all_coordinates))
+            self._vor = scipy.spatial.Voronoi(np.array(self.all_coordinates))
         return self._vor
 
     @vor.setter
