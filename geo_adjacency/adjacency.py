@@ -373,7 +373,7 @@ def load_test_geoms(
 
 
 if __name__ == "__main__":
-    s, t, o = load_test_geoms("../tests/sample_data")
+    s, t, o = load_test_geoms("tests/sample_data")
     engine = AdjacencyEngine(s, t, o, True, 0.001)
     fig = voronoi_plot_2d(engine.vor)
     plt.show()
