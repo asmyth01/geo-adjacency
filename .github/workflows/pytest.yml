@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Test with pytest
         run: |
-          cd ../tests
-          pwd
+          echo "Working directory: $(pwd)"
+          echo "Python version: $(python --version)"
           pip install pytest
-          pytest ../tests  
+          pytest ../tests
