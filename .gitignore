@@ -3,3 +3,4 @@
 .python-version
 .idea/*
 *.log
+docs/_build/*
