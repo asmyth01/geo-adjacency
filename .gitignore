@@ -6,4 +6,4 @@
 docs/_build/*
 _build/*
 .pytest_cache/*
-junit/*
+junit
