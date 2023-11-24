@@ -1,0 +1,2 @@
+[TYPECHECK]
+ignored-classes=Scipy,Scipy.spatial,Voronoi
