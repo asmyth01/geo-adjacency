@@ -21,4 +21,4 @@ jobs:
           ls ${{ github.workspace }}
           tree ${{ github.workspace }}
           pip install pytest
-          pytest tests
+          pytest tests/
