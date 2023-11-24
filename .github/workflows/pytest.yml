@@ -18,6 +18,7 @@ jobs:
     steps:
       - name: Test with pytest
         run: |
+          cd ../tests
           pwd
           pip install pytest
           pytest ../tests  
