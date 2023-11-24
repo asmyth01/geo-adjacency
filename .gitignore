@@ -5,4 +5,5 @@
 *.log
 docs/_build/*
 _build/*
-junit
+.pytest_cache/*
+junit/*
