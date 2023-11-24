@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Test with pytest
         run: |
+          apt-get install tree
+          tree
           echo "Working directory: $(pwd)"
           echo "Python version: $(python --version)"
           ls /home/runner/work/geo-adjacency
