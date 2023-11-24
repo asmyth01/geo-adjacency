@@ -20,5 +20,7 @@ jobs:
         run: |
           echo "Working directory: $(pwd)"
           echo "Python version: $(python --version)"
+          ls /home/runner/work/geo-adjacency
+          
           pip install pytest
-          pytest ../tests
+          pytest /home/runner/work/geo-adjacency/tests
