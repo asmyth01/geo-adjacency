@@ -1,11 +1,8 @@
-from collections import defaultdict
-
-from matplotlib import pyplot as plt
-from scipy.spatial import voronoi_plot_2d
+import os
 
 from geo_adjacency import adjacency
 from geo_adjacency.utils import flatten_list
-from tests.testUtils import load_test_geoms
+from .utils import load_test_geoms
 
 source_geoms, target_geoms, obstacle_geoms = load_test_geoms("sample_data")
 

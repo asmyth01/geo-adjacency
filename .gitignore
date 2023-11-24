@@ -4,3 +4,5 @@
 .idea/*
 *.log
 docs/_build/*
+.pytest_cache/*
+junit/*
