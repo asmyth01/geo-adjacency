@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo-adjacency"
-version = "1.0.3"
+version = "1.0.4"
 description = ""
 authors = ["Andrew Smyth <andrews@zillowgroup.com>"]
 readme = "README.md"
