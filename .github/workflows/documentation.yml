@@ -1,6 +1,8 @@
 name: documentation
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  release:
+    types: [published]
 
 permissions:
   contents: write
