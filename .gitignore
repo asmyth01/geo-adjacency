@@ -4,3 +4,4 @@
 .idea/*
 *.log
 docs/_build/*
+dist/*

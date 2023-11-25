@@ -1,6 +1,6 @@
 from geo_adjacency import adjacency
 from geo_adjacency.utils import flatten_list
-from geo_adjacency.tests.utils import load_test_geoms
+from tests.utils import load_test_geoms
 
 source_geoms, target_geoms, obstacle_geoms = load_test_geoms("sample_data")
 
