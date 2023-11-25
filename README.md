@@ -1,3 +1,7 @@
+# geo-adjacency
+https://pypi.org/project/geo-adjacency/
+
+
 # Installation
 
 ## pip
