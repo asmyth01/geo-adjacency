@@ -12,6 +12,8 @@ Welcome to geo-adjacency's documentation!
 
    Install
    Quickstart
+   Methodology
+   modules
 
 
 

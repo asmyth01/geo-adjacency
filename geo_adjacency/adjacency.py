@@ -55,11 +55,14 @@ class _Feature:
     def __str__(self):
         return str(self.geometry)
 
+    def __repr__(self):
+        return f"<_Feature: {str(self.geometry)}>"
+
     @property
     def geometry(self):
         """
-        Acess the Shapely geometry of the feature.
-        :return:
+        Access the Shapely geometry of the feature.
+        :return: BaseGeometry
         """
         return self._geometry
 
@@ -71,20 +74,20 @@ class _Feature:
     @property
     def coords(self) -> List[Tuple[float, float]]:
         """
-        Convenience property for accessing the coordinates of the geometry.
+        Convenience property for accessing the coordinates of the geometry as a list of 2-tuples.
 
         :return: List[Tuple[float, float]]: A list of coordinate tuples.
         """
         if not self._coords:
             if isinstance(self.geometry, Point):
-                self._coords = [(self.geometry.x, self.geometry.y)]
+                self._coords = tuple([(self.geometry.x, self.geometry.y)])
             elif isinstance(self.geometry, Polygon):
-                self._coords = mapping(self.geometry)["coordinates"][0]
+                self._coords = tuple(mapping(self.geometry)["coordinates"][0])
             elif isinstance(self.geometry, MultiPolygon):
-                self._coords = flatten_list(
-                    mapping(self.geometry)["coordinates"][0])
+                self._coords = tuple(flatten_list(
+                    mapping(self.geometry)["coordinates"][0]))
             elif isinstance(self.geometry, LineString):
-                self._coords = list((x, y) for x, y in self.geometry.coords)
+                self._coords = tuple((x, y) for x, y in self.geometry.coords)
             else:
                 raise TypeError(
                     f"Unknown geometry type '{type(self.geometry)}'")
@@ -117,12 +120,16 @@ class AdjacencyEngine:
         features are in the same projection.
 
         :param source_geoms: List of Shapely geometries. We will test if these features are
-        adjacent to the target features. :param target_geoms: List of Shapley geometries. We will
-        test if these features are adjacent to the source features. :param obstacle_geoms: List
+        adjacent to the target features.
+        :param target_geoms: List of Shapley geometries. We will
+        test if these features are adjacent to the source features.
+        :param obstacle_geoms: List
         of Shapely geometries. These features will not be tested for adjacency, but they can
-        prevent a source and target feature from being adjacent. :param densify_features: If
+        prevent a source and target feature from being adjacent.
+        :param densify_features: If
         True, we will add additional points to the features to improve accuracy of the voronoi
-        diagram. :param max_segment_length: The maximum distance between vertices that we want.
+        diagram.
+        :param max_segment_length: The maximum distance between vertices that we want.
         In projection units. densify_features must be True, or an error will be thrown. If
         densify_features is True and max_segment_length is false, then the max_segment_length
         will be calculated based on the average segment length of all features, divided by 5.
@@ -134,24 +141,23 @@ class AdjacencyEngine:
                 "interpolate_points must be True if interpolation_distance is not None"
             )
 
-        self._source_features: List[_Feature] = [
+        self._source_features: Tuple[_Feature] = tuple([
             _Feature(geom) for geom in source_geoms
-        ]
-        self._target_features: List[_Feature] = [
+        ])
+        self._target_features: Tuple[_Feature] = tuple([
             _Feature(geom) for geom in target_geoms
-        ]
-        self._obstacle_features: Union[List[_Feature], None] = [
+        ])
+        self._obstacle_features: Union[Tuple[_Feature], None] = tuple([
             _Feature(geom) for geom in obstacle_geoms
-        ]
+        ])
         self._adjacency_dict = None
         self._feature_indices = None
         self._vor = None
 
-        self.all_features: List[_Feature] = [
-            *self.source_features,
-            *self.target_features,
-            *self.obstacle_features,
-        ]
+        """All source, target, and obstacle features in a single list. The order of this list must
+        not be changed."""
+        self.all_features: Tuple[_Feature, ...] = tuple([*self.source_features, *self.target_features,
+                                                         *self.obstacle_features])
 
         if densify_features:
             if max_segment_length is None:
@@ -162,9 +168,9 @@ class AdjacencyEngine:
                 feature.geometry = feature.geometry.segmentize(
                     max_segment_length)
 
-        self.all_coordinates = flatten_list(
+        self.all_coordinates: Tuple[Tuple[float, float]] = tuple(flatten_list(
             [feature.coords for feature in self.all_features]
-        )
+        ))
 
     def calc_segmentation_dist(self, divisor=5):
         """
@@ -194,7 +200,7 @@ class AdjacencyEngine:
         )
 
     @property
-    def source_features(self) -> List[_Feature]:
+    def source_features(self) -> Tuple[_Feature]:
         """
         Features which will be the keys in the adjacency_dict.
         :return: List of source features.
@@ -202,11 +208,11 @@ class AdjacencyEngine:
         return self._source_features
 
     @source_features.setter
-    def source_features(self, features: List[BaseGeometry]):
+    def source_features(self, features: Tuple[BaseGeometry]):
         raise ImmutablePropertyError("Property source_features is immutable.")
 
     @property
-    def target_features(self) -> List[_Feature]:
+    def target_features(self) -> Tuple[_Feature]:
         """
         Features which will be the values in the adjacency_dict.
         :return: List of target features.
@@ -218,7 +224,7 @@ class AdjacencyEngine:
         raise ImmutablePropertyError("Property target_features is immutable.")
 
     @property
-    def obstacle_features(self) -> List[_Feature]:
+    def obstacle_features(self) -> Tuple[_Feature]:
         """
         Features which can prevent source and target features from being adjacent. They
         Do not participate in the adjacency_dict.
@@ -348,37 +354,3 @@ class AdjacencyEngine:
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
         plt.show()
-
-
-def load_test_geoms(
-        test_data_dir,
-) -> Tuple[List[BaseGeometry], List[BaseGeometry], List[BaseGeometry]]:
-    """
-    Load some test data
-    """
-
-    with open(os.path.join(test_data_dir, "source.csv"),
-              encoding="utf-8") as f:
-        source_geoms = [loads(line) for line in f.readlines()]
-
-    with open(os.path.join(test_data_dir, "target.csv"),
-              encoding="utf-8") as f:
-        target_geoms = [loads(line) for line in f.readlines()]
-
-    with open(os.path.join(test_data_dir, "obstacle.csv"),
-              encoding="utf-8") as f:
-        obstacle_geoms = [loads(line) for line in f.readlines()]
-
-    return source_geoms, target_geoms, obstacle_geoms
-
-
-if __name__ == "__main__":
-    s, t, o = load_test_geoms("../tests/sample_data")
-    engine = AdjacencyEngine(s, t, o, True, 0.001)
-    fig = voronoi_plot_2d(engine.vor)
-    plt.show()
-    start = time.time()
-    print(engine.get_adjacency_dict())
-    print("elapsed time: ", time.time() - start)
-
-    engine.plot_adjacency_dict()
