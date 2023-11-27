@@ -3,5 +3,6 @@
 .python-version
 .idea/*
 *.log
-docs/_build/*
+doc/_build/*
 dist/*
+_build/*
