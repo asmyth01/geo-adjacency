@@ -44,8 +44,8 @@ _See the [docs](https://asmyth01.github.io/geo-adjacency/index.html) for details
 
     The output is a dictionary. Keys are the indices of source geometries in the input list, and values are a list of indices of adjacent target geometries in the input list.
 
-4. You can visualize the output with a handy built-in method which uses pyplot.::
-   engine.plot_adjacency_dict(). (Source geoms are grey, targets are blue, obstacles are red. Linkages are green.
+4. You can visualize the output with a handy built-in method which uses pyplot.
+   `engine.plot_adjacency_dict()`. (Source geoms are grey, targets are blue, obstacles are red. Linkages are green.
 
    ![adjancency diagram](docs/images/adjacency_with_segmentation.png) 
 
