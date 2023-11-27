@@ -15,6 +15,10 @@ When it comes to spatial analysis, you can sometimes get away with an intersecti
 question of adjacency. But that only works with perfect data, where all features are perfectly
 tiled across the plane, with no gaps in between.
 
+.. note::
+   This definition somewhat differs from another geometric concept of dajacency, in which adjacent
+   geometries must be either touching, or share a corner. See this article for more: https://www.e-education.psu.edu/geog586/taxonomy/term/264
+
 A adjacency analysis must take gaps between features into account. Simplistically, this could be
 accomplished with ray-casting: you could send a ray out from every source towards every target,
 and get if the ray intersects with any obstacles in between. But this doesn't always make sense.
