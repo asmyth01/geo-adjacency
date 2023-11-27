@@ -47,7 +47,7 @@ _See the [docs](https://asmyth01.github.io/geo-adjacency/index.html) for details
 4. You can visualize the output with a handy built-in method which uses pyplot.::
    engine.plot_adjacency_dict(). (Source geoms are grey, targets are blue, obstacles are red. Linkages are green.
 
-   ![adjancency diagram](docs/images/adjacency_w_segmentization.png) 
+   ![adjancency diagram](docs/images/adjacency_with_segmentation.png) 
 
 5.  You probably will want to match the adjacency dictionary back to the original data so that you can do something cool with it.
 ```python
