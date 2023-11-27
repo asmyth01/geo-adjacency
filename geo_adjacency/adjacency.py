@@ -191,7 +191,7 @@ class AdjacencyEngine:
         :param divisor: Divide the average segment length by this number to get the new desired
         segment length.
 
-        :return:
+        :return: Average segment length divided by divisor
         """
 
         all_coordinates = flatten_list(

@@ -23,7 +23,7 @@ This guide will get you up and running with adjacency analysis quickly.
    engine.plot_adjacency_dict(). (Source geoms are grey, targets are blue, obstacles are red. Linkages
    are green.
 
-   .. image:: images/adjacency_w_segmentization.png
+   .. image:: images/adjacency_with_segmentation.png
 
 #. You probably will want to match the adjacency dictionary back to the original data so that you can do something cool with it.
 
