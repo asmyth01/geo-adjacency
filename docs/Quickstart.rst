@@ -21,6 +21,7 @@ This guide will get you up and running with adjacency analysis quickly.
 
 #. You can visualize the output with a handy built-in method which uses pyplot.::
    engine.plot_adjacency_dict(). (Source geoms are grey, targets are blue, obstacles are red. Linkages
+   are green.
 
    .. image:: images/adjacency_w_segmentization.png
 

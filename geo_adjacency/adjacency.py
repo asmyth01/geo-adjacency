@@ -1,6 +1,12 @@
 """
-Calculate adjacency relationships between features, based on the intersection of their Voronoi
-diagram regions.
+The adjacency module is a part of the geo-adjacency package, which provides functionality for
+calculating and analyzing adjacency between geometries. It implements the AdjacencyEngine class,
+which allows users to determine adjacency relationships between a set of source and target
+geometries, taking into account obstacles and a specified radius. The module utilizes the Voronoi
+diagram to generate adjacency linkages and provides methods for plotting the adjacency linkages on
+a map. The module also handles cases where there are gaps between features, ensuring accurate
+adjacency analysis. Overall, the adjacency module enables users to answer questions about spatial
+adjacency, providing valuable insights for geospatial analysis and decision-making processes.
 """
 
 import math
