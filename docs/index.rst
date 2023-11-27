@@ -12,9 +12,13 @@ Welcome to geo-adjacency's documentation!
 
    Install
    Quickstart
+   Methodology
    modules
 
-
+These are the docs for geo-adjacency. This module determines adjacency relationships between
+geometries that may have gaps between them. We use Voronoi diagram analysis to essentially close
+these gaps. The analysis is lightning fast thanks to Qhull, a C library with advanced geospatial
+capabilities.
 
 Indices and tables
 ==================
