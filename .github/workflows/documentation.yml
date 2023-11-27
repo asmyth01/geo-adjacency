@@ -15,7 +15,7 @@ jobs:
           pip install sphinx sphinx_rtd_theme myst_parser sphinx_sitemap
       - name: Autodoc
         run: |
-          sphinx-apidoc -o docs geo_adjacency
+          sphinx-apidoc -o doc geo_adjacency
       - name: Sphinx build
         run: |
           sphinx-build doc _build
