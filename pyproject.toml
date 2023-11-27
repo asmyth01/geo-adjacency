@@ -6,6 +6,7 @@ authors = ["Andrew Smyth <andrews@zillowgroup.com>"]
 readme = "README.md"
 packages = [{include = "geo_adjacency"}]
 license = "MIT"
+include = ["tests/sample_data/*"]
 
 [tool.poetry.dependencies]
 python = "<3.13,>=3.9"
