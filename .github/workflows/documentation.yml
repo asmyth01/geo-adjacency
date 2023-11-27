@@ -1,11 +1,6 @@
 name: documentation
 
-on:
-  pull_request:
-    types: [ opened, reopened ]
-  release:
-    types: [published]
-
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: write
 
