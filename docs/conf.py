@@ -30,3 +30,4 @@ autodoc_mock_imports = ["scipy", "shapely", "numpy", "matplotlib"]
 
 html_theme = 'classic'
 html_static_path = ['_static']
+html_baseurl = 'https://asmyth01.github.io/geo-adjacency/'
