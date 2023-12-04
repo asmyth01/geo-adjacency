@@ -1,11 +1,13 @@
-geo-adjacency Methodolgy
-========================
+=========================
+geo-adjacency Methodology
+=========================
 
 This package aims to answer a seemingly simply question: is one thing next to another thing?
 
-Unlike many geospatial problems, this one is surprisingly tricky. A check for intersection between
-two geometries is pretty straightforard to implement. It's also quite easy to define. Adjacency is
-much harder to define, rendering it a more challenging problem to solve algorithmically.
+One definition of adjacency supposes that all geometries in a set are touching. If two geometries
+intersect, then they are adjacent. This is great for some applications, like determining which
+counties are adjacent to each other. But much geospatial data has gaps between features. What to do
+then? Intersections don't tell us anything,
 
 At the same time, questions of adjacency are often essential. There is a very large difference
 between having a playground which is immediately adjacent to an active railway line, and one which
@@ -16,7 +18,7 @@ question of adjacency. But that only works with perfect data, where all features
 tiled across the plane, with no gaps in between.
 
 .. note::
-   This definition somewhat differs from another geometric concept of dajacency, in which adjacent
+   This definition somewhat differs from another geometric concept of adjacency, in which adjacent
    geometries must be either touching, or share a corner. See this article for more: https://www.e-education.psu.edu/geog586/taxonomy/term/264
 
 A adjacency analysis must take gaps between features into account. Simplistically, this could be
@@ -29,17 +31,16 @@ Take the example below:
 A ray cast from geometry A will reach Geometry B some of the time, but clearly they are not adjacent,
 because geometry C interferes.
 
-We could tweak the scenario slightly, and give the two geoemtries a full line of sight. In other words,
+We could tweak the scenario slightly, and give the two geometries a full line of sight. In other words,
 A ray cast from any point to any other point would have a clear path.
 
    .. image:: images/AdjacencyRaycast2.png
 
-But are these two geometries realy adjacent? Maybe. This is the grey area that makes any algorithmic
+But are these two geometries really adjacent? Maybe. This is the grey area that makes any algorithmic
 answer difficult.
 
 Voronoi Diagrams to the Rescue
-==============================
-
+------------------------------
 What we really need is a way to erase the gaps between the geometries. If we could only slowly expand
 each geometry, as though inflating a series of balloons in a box, eventually they would touch, and
 we could do a simply intersection. That would solve our adjacency problem in a deterministic,
@@ -58,7 +59,7 @@ In this package, `scipy.spatial.Voronoi <https://docs.scipy.org/doc/scipy/refere
 calculate the diagram very quickly.
 
 Segementization
-===============
+---------------
 
 There's a further problem, though: the Voronoi algorithm only works on points. What if our inputs
 are polygons? How do we get a Voronoi diagram of a polygon?

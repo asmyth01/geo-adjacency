@@ -1,12 +1,30 @@
 [tool.poetry]
 name = "geo-adjacency"
-version = "1.0.7"
-description = ""
-authors = ["Andrew Smyth <andrews@zillowgroup.com>"]
+version = "1.0.8"
+description = "A package to determine which geometries are adjacent to each other, accounting for obstacles and gaps between features."
+authors = ["Andrew Smyth <andrew.j.smyth.89@gmail.com>"]
 readme = "README.md"
 packages = [{include = "geo_adjacency"}]
 license = "MIT"
-include = ["tests/sample_data/*"]
+repository = "https://github.com/andrewsmyth/geo-adjacency"
+homepage = "https://asmyth01.github.io/geo-adjacency/"
+documentation = "https://asmyth01.github.io/geo-adjacency/"
+keywords = ["voronoi", "adjacency", "geospatial", "geometry"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: GIS :: Spatial Analysis",
+    "Topic :: Scientific/Engineering :: GIS :: Topology",
+]
 
 [tool.poetry.dependencies]
 python = "<3.13,>=3.9"
