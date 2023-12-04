@@ -5,43 +5,24 @@ on: [push]
 jobs:
 
   test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
-    runs-on: ubuntu-latest
+        python-version: [ '3.9', '3.10', '3.11' ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: 1.7.1
-
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v3
-        id: cache
-        with:
-          path: ~/.virtualenvs
-          key: poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            poetry-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Set Poetry config
+      - name: Install dependencies
         run: |
-          poetry config virtualenvs.in-project false
-          poetry config virtualenvs.path ~/.virtualenvs
-
-      - name: Install Dependencies
-        run: poetry install
-        if: steps.cache.outputs.cache-hit != 'true'
-
+          python -m pip install --upgrade pip
+          pip install build pytest pytest-cov
+          python -m build
       - name: Test with pytest
         run: poetry run pytest --cov .
