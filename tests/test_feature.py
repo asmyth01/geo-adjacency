@@ -1,8 +1,6 @@
 from shapely.wkt import loads
 
 import geo_adjacency.adjacency
-import geo_adjacency.feature
-from geo_adjacency import adjacency
 
 
 def test_point_feature():
