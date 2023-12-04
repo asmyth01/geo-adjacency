@@ -1,5 +1,3 @@
-from matplotlib import pyplot as plt
-from scipy.spatial import voronoi_plot_2d
 from shapely.wkt import dumps, loads
 
 from geo_adjacency import adjacency

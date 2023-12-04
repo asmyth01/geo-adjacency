@@ -15,6 +15,10 @@ which allows us to determine adjacency relationships. Adjacency relationships ar
 import math
 from collections import defaultdict
 from typing import List, Union, Dict, Tuple
+try:
+    from typing_extensions import Self  # Python < 3.11
+except ImportError:
+    from typing import Self  # Python >= 3.11
 import logging
 
 import shapely.ops
@@ -103,13 +107,25 @@ class _Feature:
     def __repr__(self):
         return f"<_Feature: {str(self.geometry)}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other: Self):
         if not isinstance(other, type(self)):
             return False
         return self.geometry.equals_exact(other.geometry, 1e-8)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self):
         return not self.__eq__(other)
+
+    def is_adjacent(self, other: Self, min_overlapping_voronoi_vertices: int = 2) -> bool:
+        """
+        Determine if two features are adjacent based on how many Voronoi vertices they share. Note:
+        the Voronoi analysis must have been run, or this will always return False.
+        :param other:
+        :return:
+        """
+        assert isinstance(other, type(self)), "Cannot compare '%s' with '%s'." % (type(self), type(other))
+        if len(self.voronoi_points) == 0 and len(other.voronoi_points) == 0:
+            logger.warning("No Voronoi vertices found for either feature. Did you run the analysis yet?")
+        return len(self.voronoi_points & other.voronoi_points) >= min_overlapping_voronoi_vertices
 
     @property
     def geometry(self):
@@ -367,6 +383,22 @@ class AdjacencyEngine:
                 if voronoi_vertex_index != -1:
                     feature.voronoi_points.add(voronoi_vertex_index)
 
+    def _determine_adjacency(self, source_set: Tuple[_Feature], target_set: Tuple[_Feature]):
+        """
+        Determines the adjacency relationship between two sets of features.
+        Parameters:
+            source_set (Tuple[_Feature]): The set of source features.
+            target_set (Tuple[_Feature]): The set of target features.
+        Returns:
+            None
+        """
+        min_overlapping_voronoi_vertices = 2
+        for source_index, source_feature in enumerate(source_set):
+            for target_index, target_feature in enumerate(target_set):
+                if source_feature != target_feature and\
+                        source_feature.is_adjacent(target_feature, min_overlapping_voronoi_vertices):
+                    self._adjacency_dict[source_index].append(target_index)
+
     def get_adjacency_dict(self) -> Dict[int, List[int]]:
         """
         Returns a dictionary of indices. They keys are the indices of feature_geoms. The values
@@ -379,7 +411,9 @@ class AdjacencyEngine:
         values are the indices of any adjacent features
         """
 
-        MIN_OVERLAPPING_VORONOI_VERTICES = 2
+        # We want adjacent features to have at least two overlapping vertices, otherwise we might
+        # call the features adjacent when their voronoi regions don't share any edges.
+
         if self._adjacency_dict is None:
             self._tag_feature_with_voronoi_vertices()
 
@@ -389,33 +423,10 @@ class AdjacencyEngine:
 
             # Get adjacency between source and target features
             if len(self.target_features) > 0:
-                for source_index, source_feature in enumerate(self.source_features):
-                    for target_index, target_feature in enumerate(self.target_features):
-                        if (
-                                len(
-                                    source_feature.voronoi_points
-                                    & target_feature.voronoi_points
-                                )
-                                >= MIN_OVERLAPPING_VORONOI_VERTICES
-                        ):
-                            print(f"Source_index: {source_index}")
-                            print(f"Target_index: {target_index}")
-                            self._adjacency_dict[source_index].append(
-                                target_index)
+                self._determine_adjacency(self.source_features, self.target_features)
             # If no target specified, get adjacency between source and other source features.
             else:
-                for source_index, source_feature in enumerate(self.source_features):
-                    for source_index_2, source_feature_2 in enumerate(
-                            self.source_features):
-                        if source_feature != source_feature_2 and (
-                                len(source_feature.voronoi_points & source_feature_2.voronoi_points
-                                )
-                                >= MIN_OVERLAPPING_VORONOI_VERTICES
-                        ):
-                            print(f"Source_index: {source_index}")
-                            print(f"Target_index: {source_index_2}")
-                            self._adjacency_dict[source_index].append(
-                                source_index_2)
+                self._determine_adjacency(self.source_features, self.source_features)
 
         return self._adjacency_dict
 
