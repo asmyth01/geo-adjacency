@@ -1,9 +1,0 @@
-[
-  "TestAdjacencyEngine.py::test_flatten_list",
-  "TestAdjacencyEngine.py::test_get_adjacency_matrix",
-  "test_adjacency_engine.py::test_calc_segmentation_dist",
-  "test_adjacency_engine.py::test_flatten_list",
-  "test_adjacency_engine.py::test_get_adjacency_matrix",
-  "test_adjacency_engine.py::test_get_feature_from_coord_index",
-  "test_adjacency_engine.py::test_vor"
-]
