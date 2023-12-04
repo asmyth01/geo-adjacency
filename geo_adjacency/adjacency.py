@@ -21,15 +21,22 @@ except ImportError:
     from typing import Self  # Python >= 3.11
 import logging
 
+import matplotlib.pyplot as plt
+import numpy as np
 import shapely.ops
 from scipy.spatial import distance
 from scipy.spatial import Voronoi
-from shapely import Polygon, MultiPolygon, LineString, Point
+from shapely import LineString, Point, Polygon, MultiPolygon
 from shapely.geometry.base import BaseGeometry
-import numpy as np
-import matplotlib.pyplot as plt
 
 from geo_adjacency.exception import ImmutablePropertyError
+from geo_adjacency.utils import (
+    add_geometry_to_plot,
+    coords_from_point,
+    coords_from_ring,
+    coords_from_polygon,
+    coords_from_multipolygon,
+)
 
 # ToDo: Support geometries with Z-coordinates
 
@@ -42,52 +49,11 @@ c_handler.setLevel(logging.WARNING)
 
 # Create formatters and add it to handlers
 c_format = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
-f_format = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+f_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 c_handler.setFormatter(c_format)
 
 # Add handlers to the logger
 logger.addHandler(c_handler)
-
-
-def coords_from_point(point: Point) -> List[Tuple[float, float]]:
-    """
-    Convert a Point into a tuple of (x, y). We put this inside a list for consistency with other
-    coordinate methods to allow us to seamlessly merge them later.
-    :param point: A Shapely Point.
-    :return:
-    """
-    assert isinstance(point, Point), "Geometry must be a Point, not '%s'." % type(point)
-    return [(float(point.x), float(point.y))]
-
-
-def coords_from_ring(ring: LineString) -> List[Tuple[float, float]]:
-    """
-    Convert a LinearRing into a list of (x, y) tuples
-    :param ring: A Shapely LinearRing.
-    :return:
-    """
-    assert isinstance(ring, LineString), "Geometry must be a LinearRing, not '%s'." % type(ring)
-    return [(float(coord[0]), float(coord[1])) for coord in ring.coords]
-
-
-def coords_from_polygon(polygon: Polygon) -> List[Tuple[float, float]]:
-    assert isinstance(polygon, Polygon), "Geometry must be a Polygon, not '%s'." % type(polygon)
-    coords = []
-    coords.extend(coords_from_ring(polygon.exterior)[:-1])
-    for ring in polygon.interiors:
-        coords.extend(coords_from_ring(ring)[:-1])
-    return coords
-
-
-def coords_from_multipolygon(multipolygon: MultiPolygon) -> List[Tuple[float, float]]:
-    assert isinstance(multipolygon,
-                      MultiPolygon), "Geometry must be a MultiPolygon, not '%s'." % type(
-        multipolygon)
-    coords = []
-    for polygon in multipolygon.geoms:
-        coords.extend(coords_from_polygon(polygon))
-    return coords
 
 
 class _Feature:
@@ -95,7 +61,9 @@ class _Feature:
 
     def __init__(self, geometry: BaseGeometry):
         if not isinstance(geometry, (Point, Polygon, MultiPolygon, LineString)):
-            raise TypeError("Cannot create _Feature for geometry type '%s'." % type(self.geometry))
+            raise TypeError(
+                "Cannot create _Feature for geometry type '%s'." % type(self.geometry)
+            )
 
         self._geometry: BaseGeometry = geometry
         self._coords = None
@@ -115,17 +83,28 @@ class _Feature:
     def __ne__(self, other: Self):
         return not self.__eq__(other)
 
-    def is_adjacent(self, other: Self, min_overlapping_voronoi_vertices: int = 2) -> bool:
+    def is_adjacent(
+        self, other: Self, min_overlapping_voronoi_vertices: int = 2
+    ) -> bool:
         """
         Determine if two features are adjacent based on how many Voronoi vertices they share. Note:
         the Voronoi analysis must have been run, or this will always return False.
+        :param min_overlapping_voronoi_vertices:
         :param other:
         :return:
         """
-        assert isinstance(other, type(self)), "Cannot compare '%s' with '%s'." % (type(self), type(other))
+        assert isinstance(other, type(self)), "Cannot compare '%s' with '%s'." % (
+            type(self),
+            type(other),
+        )
         if len(self.voronoi_points) == 0 and len(other.voronoi_points) == 0:
-            logger.warning("No Voronoi vertices found for either feature. Did you run the analysis yet?")
-        return len(self.voronoi_points & other.voronoi_points) >= min_overlapping_voronoi_vertices
+            logger.warning(
+                "No Voronoi vertices found for either feature. Did you run the analysis yet?"
+            )
+        return (
+            len(self.voronoi_points & other.voronoi_points)
+            >= min_overlapping_voronoi_vertices
+        )
 
     @property
     def geometry(self):
@@ -158,8 +137,7 @@ class _Feature:
             elif isinstance(self.geometry, MultiPolygon):
                 self._coords = coords_from_multipolygon(self.geometry)
             else:
-                raise TypeError(
-                    f"Unknown geometry type '{type(self.geometry)}'")
+                raise TypeError(f"Unknown geometry type '{type(self.geometry)}'")
         return self._coords
 
 
@@ -176,16 +154,24 @@ class AdjacencyEngine:
     :ivar all_coordinates: List of all coordinates in the same order as all_features.
     """
 
-    __slots__ = ("_source_features", "_target_features", "_obstacle_features", "_adjacency_dict",
-                 "_feature_indices", "_vor", "all_features", "_all_coordinates")
+    __slots__ = (
+        "_source_features",
+        "_target_features",
+        "_obstacle_features",
+        "_adjacency_dict",
+        "_feature_indices",
+        "_vor",
+        "all_features",
+        "_all_coordinates",
+    )
 
     def __init__(
-            self,
-            source_geoms: List[BaseGeometry],
-            target_geoms: Union[List[BaseGeometry], None] = None,
-            obstacle_geoms: Union[List[BaseGeometry], None] = None,
-            densify_features: bool = False,
-            max_segment_length: Union[float, None] = None,
+        self,
+        source_geoms: List[BaseGeometry],
+        target_geoms: Union[List[BaseGeometry], None] = None,
+        obstacle_geoms: Union[List[BaseGeometry], None] = None,
+        densify_features: bool = False,
+        max_segment_length: Union[float, None] = None,
     ):
         """
         Note: only Multipolygons, Polygons, LineStrings and Points are supported. It is assumed all
@@ -213,15 +199,19 @@ class AdjacencyEngine:
                 "interpolate_points must be True if interpolation_distance is not None"
             )
 
-        self._source_features: Tuple[_Feature] = tuple([
-            _Feature(geom) for geom in source_geoms
-        ])
-        self._target_features: Tuple[_Feature] = tuple([
-            _Feature(geom) for geom in target_geoms
-        ]) if target_geoms else tuple()
-        self._obstacle_features: Union[Tuple[_Feature], None] = tuple([
-            _Feature(geom) for geom in obstacle_geoms
-        ]) if obstacle_geoms else tuple()
+        self._source_features: Tuple[_Feature] = tuple(
+            [_Feature(geom) for geom in source_geoms]
+        )
+        self._target_features: Tuple[_Feature] = (
+            tuple([_Feature(geom) for geom in target_geoms])
+            if target_geoms
+            else tuple()
+        )
+        self._obstacle_features: Union[Tuple[_Feature], None] = (
+            tuple([_Feature(geom) for geom in obstacle_geoms])
+            if obstacle_geoms
+            else tuple()
+        )
         self._adjacency_dict = None
         self._feature_indices = None
         self._vor = None
@@ -230,8 +220,8 @@ class AdjacencyEngine:
         """All source, target, and obstacle features in a single list. The order of this list must
         not be changed."""
         self.all_features: Tuple[_Feature, ...] = tuple(
-            [*self.source_features, *self.target_features,
-             *self.obstacle_features])
+            [*self.source_features, *self.target_features, *self.obstacle_features]
+        )
 
         if densify_features:
             if max_segment_length is None:
@@ -240,11 +230,9 @@ class AdjacencyEngine:
 
             for feature in self.all_features:
                 if not isinstance(feature.geometry, Point):
-                    feature.geometry = feature.geometry.segmentize(
-                        max_segment_length)
+                    feature.geometry = feature.geometry.segmentize(max_segment_length)
             # Reset all coordinates
             self._all_coordinates = None
-
 
     @property
     def all_coordinates(self):
@@ -259,7 +247,6 @@ class AdjacencyEngine:
     @all_coordinates.setter
     def all_coordinates(self, value):
         raise ImmutablePropertyError("Property all_coordinates is immutable.")
-
 
     def calc_segmentation_dist(self, divisor=5):
         """
@@ -279,8 +266,8 @@ class AdjacencyEngine:
 
         return float(
             (
-                    sum(distance.pdist(self.all_coordinates, "euclidean"))
-                    / math.pow(len(self.all_coordinates), 2)
+                sum(distance.pdist(self.all_coordinates, "euclidean"))
+                / math.pow(len(self.all_coordinates), 2)
             )
             / divisor
         )
@@ -320,8 +307,7 @@ class AdjacencyEngine:
 
     @obstacle_features.setter
     def obstacle_features(self, _):
-        raise ImmutablePropertyError(
-            "Property obstacle_features is immutable.")
+        raise ImmutablePropertyError("Property obstacle_features is immutable.")
 
     def get_feature_from_coord_index(self, coord_index: int) -> _Feature:
         """
@@ -368,22 +354,25 @@ class AdjacencyEngine:
         :return:
         """
         # We don't need to tag obstacles with their voronoi vertices
-        obstacle_coord_len = sum(
-            len(feat.coords) for feat in self.obstacle_features
-        )
+        obstacle_coord_len = sum(len(feat.coords) for feat in self.obstacle_features)
 
         # Tag each feature with the vertices of the voronoi region it
         # belongs to
         for feature_coord_index in range(
-                len(self.all_coordinates) - obstacle_coord_len):
+            len(self.all_coordinates) - obstacle_coord_len
+        ):
             feature = self.get_feature_from_coord_index(feature_coord_index)
-            for voronoi_vertex_index in self.vor.regions[self.vor.point_region[feature_coord_index]]:
+            for voronoi_vertex_index in self.vor.regions[
+                self.vor.point_region[feature_coord_index]
+            ]:
                 # "-1" indices indicate the vertex goes to infinity. These don't provide us
                 # with adjacency information, so we ignore them.
                 if voronoi_vertex_index != -1:
                     feature.voronoi_points.add(voronoi_vertex_index)
 
-    def _determine_adjacency(self, source_set: Tuple[_Feature], target_set: Tuple[_Feature]):
+    def _determine_adjacency(
+        self, source_set: Tuple[_Feature], target_set: Tuple[_Feature]
+    ):
         """
         Determines the adjacency relationship between two sets of features.
         Parameters:
@@ -395,8 +384,9 @@ class AdjacencyEngine:
         min_overlapping_voronoi_vertices = 2
         for source_index, source_feature in enumerate(source_set):
             for target_index, target_feature in enumerate(target_set):
-                if source_feature != target_feature and\
-                        source_feature.is_adjacent(target_feature, min_overlapping_voronoi_vertices):
+                if source_feature != target_feature and source_feature.is_adjacent(
+                    target_feature, min_overlapping_voronoi_vertices
+                ):
                     self._adjacency_dict[source_index].append(target_index)
 
     def get_adjacency_dict(self) -> Dict[int, List[int]]:
@@ -440,7 +430,9 @@ class AdjacencyEngine:
         if len(self.target_features) > 0:
             for source_i, target_is in self.get_adjacency_dict().items():
                 source_poly = self.source_features[source_i].geometry
-                target_polys = [self.target_features[target_i].geometry for target_i in target_is]
+                target_polys = [
+                    self.target_features[target_i].geometry for target_i in target_is
+                ]
 
                 # Plot the linestrings between the source and target polygons
                 links = []
@@ -453,76 +445,33 @@ class AdjacencyEngine:
                                 )
                             )
                         except ValueError:
-                            logger.error(f"Error creating link between '{target_poly}' and '{source_poly}'")
+                            logger.error(
+                                f"Error creating link between '{target_poly}' and '{source_poly}'"
+                            )
                 add_geometry_to_plot(links, "green")
 
         else:
             for source_i, source_2_is in self.get_adjacency_dict().items():
                 source_poly = self.source_features[source_i].geometry
                 target_polys = [
-                    self.source_features[source_2_i].geometry for source_2_i in
-                    source_2_is if source_2_i > source_i
+                    self.source_features[source_2_i].geometry
+                    for source_2_i in source_2_is
+                    if source_2_i > source_i
                 ]
 
                 # Plot the linestrings between the source and target polygons
                 links = [
-                    LineString(
-                        [target_poly.centroid, source_poly.centroid]
-                    )
-                    for target_poly in target_polys if target_poly is not None
+                    LineString([target_poly.centroid, source_poly.centroid])
+                    for target_poly in target_polys
+                    if target_poly is not None
                 ]
                 add_geometry_to_plot(links, "green")
 
-        add_geometry_to_plot(
-            [t.geometry for t in self.target_features], "blue")
-        add_geometry_to_plot(
-            [t.geometry for t in self.source_features], "grey")
-        add_geometry_to_plot(
-            [t.geometry for t in self.obstacle_features], "red")
+        add_geometry_to_plot([t.geometry for t in self.target_features], "blue")
+        add_geometry_to_plot([t.geometry for t in self.source_features], "grey")
+        add_geometry_to_plot([t.geometry for t in self.obstacle_features], "red")
 
         plt.title("Adjacency linkages between source and target")
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
         plt.show()
-
-
-def flatten_list(nested_list) -> List:
-    # check if list is empty
-    if not (bool(nested_list)):
-        return nested_list
-
-    # to check instance of list is empty or not
-    if isinstance(nested_list[0], list):
-        # call function with sublist as argument
-        return flatten_list(*nested_list[:1]) + flatten_list(nested_list[1:])
-
-    # Call function with sublist as argument
-    return nested_list[:1] + flatten_list(nested_list[1:])
-
-
-def add_geometry_to_plot(geoms, color="black"):
-    """
-    When updating the test data, it may be useful to visualize it.
-    :param geoms:
-    :param color:
-    :return:
-    """
-    for geom in geoms:
-        if isinstance(geom, Point):
-            plt.plot(
-                geom.x,
-                geom.y,
-                marker="o",
-                markersize=5,
-                markeredgecolor="black",
-                markerfacecolor=color,
-            )
-        elif isinstance(geom, LineString):
-            plt.plot(*geom.coords.xy, color=color)
-        elif isinstance(geom, Polygon):
-            plt.plot(*geom.exterior.xy, color=color, linestyle="-")
-        elif isinstance(geom, MultiPolygon):
-            for sub_poly in geom.geoms:
-                plt.plot(*sub_poly.exterior.xy, color=color, linewidth=3)
-        else:
-            raise TypeError("Unknown geometry type")
