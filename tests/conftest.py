@@ -1,9 +1,11 @@
 """
-Reusable fixtures for testing
+Reusable fixtures for testing. All fixtures in this repo will be available in all test modules
+without explicit importing.
 """
 
 import pytest
 from shapely.wkt import loads
+from geo_adjacency.adjacency import _Feature
 
 # A list of rectangular polygon WKTs with a small space between each. Order is clockwise
 source_wkts = [
@@ -49,3 +51,21 @@ def target_geoms():
 @pytest.fixture
 def obstacle_geoms():
     return [loads(wkt) for wkt in obstacle_wkts]
+
+
+@pytest.fixture()
+def point_geom_a():
+    return loads("POINT (30 10)")
+
+
+@pytest.fixture
+def point_geom_b():
+    return loads("POINT (10 10)")
+
+@pytest.fixture
+def point_feature_a(point_geom_a):
+    return _Feature(point_geom_a)
+
+@pytest.fixture
+def point_feature_b(point_geom_b):
+    return _Feature(point_geom_b)

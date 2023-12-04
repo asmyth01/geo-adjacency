@@ -14,7 +14,8 @@ which allows us to determine adjacency relationships. Adjacency relationships ar
 
 import math
 from collections import defaultdict
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Tuple, Generator
+
 try:
     from typing_extensions import Self  # Python < 3.11
 except ImportError:
@@ -41,7 +42,7 @@ from geo_adjacency.utils import (
 # ToDo: Support geometries with Z-coordinates
 
 # Create a custom logger
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Create handlers
 c_handler = logging.StreamHandler()
@@ -53,17 +54,23 @@ f_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message
 c_handler.setFormatter(c_format)
 
 # Add handlers to the logger
-logger.addHandler(c_handler)
+log.addHandler(c_handler)
 
 
 class _Feature:
+    """
+    A _Feature is a wrapper around a geometry that allows us to easily determine if two geometries
+    are adjacent.
+    """
     __slots__ = ("_geometry", "_coords", "voronoi_points")
 
     def __init__(self, geometry: BaseGeometry):
         if not isinstance(geometry, (Point, Polygon, MultiPolygon, LineString)):
             raise TypeError(
-                "Cannot create _Feature for geometry type '%s'." % type(self.geometry)
+                "Cannot create _Feature for geometry type '%s'." % type(geometry)
             )
+
+        assert geometry.is_valid, "Could not process invalid geometry: %s" % geometry.wkt
 
         self._geometry: BaseGeometry = geometry
         self._coords = None
@@ -74,14 +81,6 @@ class _Feature:
 
     def __repr__(self):
         return f"<_Feature: {str(self.geometry)}>"
-
-    def __eq__(self, other: Self):
-        if not isinstance(other, type(self)):
-            return False
-        return self.geometry.equals_exact(other.geometry, 1e-8)
-
-    def __ne__(self, other: Self):
-        return not self.__eq__(other)
 
     def is_adjacent(
         self, other: Self, min_overlapping_voronoi_vertices: int = 2
@@ -98,9 +97,10 @@ class _Feature:
             type(other),
         )
         if len(self.voronoi_points) == 0 and len(other.voronoi_points) == 0:
-            logger.warning(
+            log.warning(
                 "No Voronoi vertices found for either feature. Did you run the analysis yet?"
             )
+            return False
         return (
             len(self.voronoi_points & other.voronoi_points)
             >= min_overlapping_voronoi_vertices
@@ -140,6 +140,16 @@ class _Feature:
                 raise TypeError(f"Unknown geometry type '{type(self.geometry)}'")
         return self._coords
 
+    @coords.setter
+    def coords(self, coords):
+        """
+        Coordinates cannot be set manually, and will raise an error if attempted. Change
+        `geometry` instead and `coords` will update.
+        :param coords:
+        :return:
+        """
+        raise ImmutablePropertyError("Property coords is immutable.")
+
 
 class AdjacencyEngine:
     """
@@ -149,9 +159,6 @@ class AdjacencyEngine:
     First, the Voronoi diagram is generated for each geometry and obstacle. Then, we check which
     voronoi shapes intersect one another. If they do, then the two underlying geometries are
     adjacent.
-
-    :ivar all_features: List of all features in order of source, target, and obstacle.
-    :ivar all_coordinates: List of all coordinates in the same order as all_features.
     """
 
     __slots__ = (
@@ -161,7 +168,7 @@ class AdjacencyEngine:
         "_adjacency_dict",
         "_feature_indices",
         "_vor",
-        "all_features",
+        "_all_features",
         "_all_coordinates",
     )
 
@@ -219,20 +226,28 @@ class AdjacencyEngine:
 
         """All source, target, and obstacle features in a single list. The order of this list must
         not be changed."""
-        self.all_features: Tuple[_Feature, ...] = tuple(
+        self._all_features: Tuple[_Feature, ...] = tuple(
             [*self.source_features, *self.target_features, *self.obstacle_features]
         )
 
         if densify_features:
             if max_segment_length is None:
-                max_segment_length = self.calc_segmentation_dist()
-                logger.info("Calculated max_segment_length of %s" % max_segment_length)
+                max_segment_length = self._calc_segmentation_dist()
+                log.info("Calculated max_segment_length of %s" % max_segment_length)
 
             for feature in self.all_features:
                 if not isinstance(feature.geometry, Point):
                     feature.geometry = feature.geometry.segmentize(max_segment_length)
             # Reset all coordinates
             self._all_coordinates = None
+
+    @property
+    def all_features(self):
+        return self._all_features
+
+    @all_features.setter
+    def all_features(self, value):
+        raise ImmutablePropertyError("Property all_features is immutable.")
 
     @property
     def all_coordinates(self):
@@ -248,7 +263,7 @@ class AdjacencyEngine:
     def all_coordinates(self, value):
         raise ImmutablePropertyError("Property all_coordinates is immutable.")
 
-    def calc_segmentation_dist(self, divisor=5):
+    def _calc_segmentation_dist(self, divisor=5):
         """
         Try to create a well-fitting maximum length for all line segments in all features. Take
         the average distance between all coordinate pairs and divide by 5. This means that the
@@ -346,6 +361,16 @@ class AdjacencyEngine:
     def vor(self, _):
         raise ImmutablePropertyError("Property vor is immutable.")
 
+    def _get_voronoi_vertex_idx_for_coord_idx(self, feature_coord_index: int) -> Generator[int, None, None]:
+        """
+        For a given feature coordinate index, return the indices of the voronoi vertices. Ignore
+        any "-1"s, which indicate vertices at infinity; these provide no adjacency information.
+        :param feature_coord_index:
+        :return:
+        """
+
+        return (i for i in self.vor.regions[self.vor.point_region[feature_coord_index]] if i != -1)
+
     def _tag_feature_with_voronoi_vertices(self):
         """
         Tag each feature with the vertices of the voronoi region it belongs to. Runs the
@@ -362,13 +387,8 @@ class AdjacencyEngine:
             len(self.all_coordinates) - obstacle_coord_len
         ):
             feature = self.get_feature_from_coord_index(feature_coord_index)
-            for voronoi_vertex_index in self.vor.regions[
-                self.vor.point_region[feature_coord_index]
-            ]:
-                # "-1" indices indicate the vertex goes to infinity. These don't provide us
-                # with adjacency information, so we ignore them.
-                if voronoi_vertex_index != -1:
-                    feature.voronoi_points.add(voronoi_vertex_index)
+            for i in self._get_voronoi_vertex_idx_for_coord_idx(feature_coord_index):
+                feature.voronoi_points.add(i)
 
     def _determine_adjacency(
         self, source_set: Tuple[_Feature], target_set: Tuple[_Feature]
@@ -445,7 +465,7 @@ class AdjacencyEngine:
                                 )
                             )
                         except ValueError:
-                            logger.error(
+                            log.error(
                                 f"Error creating link between '{target_poly}' and '{source_poly}'"
                             )
                 add_geometry_to_plot(links, "green")
