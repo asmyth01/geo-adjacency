@@ -1,7 +1,6 @@
 from shapely.wkt import dumps, loads
 
 import geo_adjacency.adjacency
-import geo_adjacency.feature
 import geo_adjacency.utils
 from geo_adjacency import adjacency
 from geo_adjacency.utils import flatten_list
