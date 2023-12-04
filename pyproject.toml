@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo-adjacency"
-version = "1.0.8"
+version = "1.1.0"
 description = "A package to determine which geometries are adjacent to each other, accounting for obstacles and gaps between features."
 authors = ["Andrew Smyth <andrew.j.smyth.89@gmail.com>"]
 readme = "README.md"
