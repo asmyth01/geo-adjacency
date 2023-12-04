@@ -25,4 +25,4 @@ jobs:
           pip install build pytest pytest-cov
           python -m build
       - name: Test with pytest
-        run: poetry run pytest --cov .
+        run: pytest --cov .
