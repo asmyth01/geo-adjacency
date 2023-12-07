@@ -75,23 +75,23 @@ def test_change_feature_geometry(point_feature_a, point_feature_b):
 def test_features_are_adjacent(point_feature_a, point_feature_b):
     point_feature_a.voronoi_points.update({1, 2, 3, 4, 5})
     point_feature_b.voronoi_points.update({4, 5, 6, 7})
-    assert point_feature_a.is_adjacent(point_feature_b)
+    assert point_feature_a._is_adjacent(point_feature_b)
 
 
 def test_features_are_not_adjacent(point_feature_a, point_feature_b):
     point_feature_a.voronoi_points.update({1, 2, 3})
     point_feature_b.voronoi_points.update({4, 5, 6})
-    assert not point_feature_a.is_adjacent(point_feature_b)
+    assert not point_feature_a._is_adjacent(point_feature_b)
 
 
 def test_not_adjacent_only_one_shared_voronoi_vertex(point_feature_a, point_feature_b):
     point_feature_a.voronoi_points.update({1, 2, 3, 4})
     point_feature_b.voronoi_points.update({4, 5, 6})
-    assert not point_feature_a.is_adjacent(point_feature_b)
+    assert not point_feature_a._is_adjacent(point_feature_b)
 
 
 def test_features_not_adjacent_empty_voronoi(point_feature_a, point_feature_b):
-    assert not point_feature_a.is_adjacent(point_feature_b)
+    assert not point_feature_a._is_adjacent(point_feature_b)
 
 
 def test_invalid_geometry_type():

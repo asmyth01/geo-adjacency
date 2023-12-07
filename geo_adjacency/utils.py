@@ -13,8 +13,13 @@ def coords_from_point(point: Point) -> List[Tuple[float, float]]:
     """
     Convert a Point into a tuple of (x, y). We put this inside a list for consistency with other
     coordinate methods to allow us to seamlessly merge them later.
-    :param point: A Shapely Point.
-    :return:
+
+    Args:
+        point (Point): A Shapely Point.
+
+    Returns:
+        List[Tuple[float, float]]: A list of coordinate tuples.
+
     """
     assert isinstance(point, Point), "Geometry must be a Point, not '%s'." % type(point)
     return [(float(point.x), float(point.y))]
@@ -22,9 +27,13 @@ def coords_from_point(point: Point) -> List[Tuple[float, float]]:
 
 def coords_from_ring(ring: LineString) -> List[Tuple[float, float]]:
     """
-    Convert a LinearRing into a list of (x, y) tuples
-    :param ring: A Shapely LinearRing.
-    :return:
+    Convert a LinearRing into a list of (x, y) tuples.
+
+    Args:
+        ring (LineString): A Shapely LinearString.
+
+    Returns:
+        List[Tuple[float, float]]: A list of coordinate tuples.
     """
     assert isinstance(
         ring, LineString
@@ -36,8 +45,12 @@ def coords_from_polygon(polygon: Polygon) -> List[Tuple[float, float]]:
     """
     Convert a Polygon into a list of (x, y) tuples. Does not repeat the first coordinate to close
     the ring.
-    :param polygon: A Shapely Polygon.
-    :return:
+
+    Args:
+        polygon (Polygon): A Shapely Polygon.
+
+    Returns:
+        List[Tuple[float, float]]: A list of coordinate tuples.
     """
     assert isinstance(polygon, Polygon), "Geometry must be a Polygon, not '%s'." % type(
         polygon
@@ -53,8 +66,12 @@ def coords_from_multipolygon(multipolygon: MultiPolygon) -> List[Tuple[float, fl
     """
     Convert a MultiPolygon into a list of (x, y) tuples. Does not repeat the first coordinate to
     close the ring.
-    :param multipolygon: A Shapely MultiPolygon.
-    :return:
+
+    Args:
+        multipolygon (MultiPolygon): A Shapely MultiPolygon.
+
+    Returns:
+        List[Tuple[float, float]]: A list of coordinate tuples.
     """
     assert isinstance(
         multipolygon, MultiPolygon
@@ -68,8 +85,11 @@ def coords_from_multipolygon(multipolygon: MultiPolygon) -> List[Tuple[float, fl
 def flatten_list(nested_list) -> List:
     """
     Flatten a list of lists.
-    :param nested_list: A list of lists.
-    :return:
+    Args:
+        nested_list (List): A list of lists.
+
+    Returns:
+
     """
     # check if list is empty
     if not bool(nested_list):
@@ -88,9 +108,13 @@ def add_geometry_to_plot(geoms, color="black"):
     """
     When updating the test data, it may be useful to visualize it. Add a geometry to the global
     maplotlib plt object. The next time we call plt.show(), this geometry will be plotted.
-    :param geoms: A list of Shapely geometries.
-    :param color: The color we want the geometry to be in the plot.
-    :return: None
+
+    Args:
+        geoms (List[BaseGeometry]): A list of Shapely geometries.
+        color (str): The color we want the geometry to be in the plot.
+
+    Returns:
+        None
     """
     for geom in geoms:
         if isinstance(geom, Point):

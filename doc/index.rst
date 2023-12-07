@@ -13,7 +13,8 @@ Geo-Adjacency Documentation
    Install
    Quickstart
    Methodology
-   modules
+   Examples
+   Modules
 
 These are the docs for geo-adjacency. This module determines adjacency relationships between
 geometries that may have gaps between them. We use Voronoi diagram analysis to essentially close
