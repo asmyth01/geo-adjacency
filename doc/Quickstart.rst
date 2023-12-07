@@ -3,27 +3,55 @@ Quickstart
 
 This guide will get you up and running with adjacency analysis quickly.
 
-#. Load the data. geo-adjacency expects you to provide your data as Shapely geometries. You will provide three lists: source_geoemtries, target_geometries, and obstacle_geometries. What we are analyzing is which of the source geometries are adjacent to which of the target geometries. Obstacles can prevent a source and target from being adjacent, but they do not participate in the adjacency dictionary.
-#. Create an AdjacencyEngine. In this case, we'll load the sample data which is available on `Github <https://github.com/asmyth01/geo-adjacency/>`_.
+#. Load the data. `geo-adjacency` expects you to provide your data as
+   `Shapely <https://shapely.readthedocs.io/en/stable/manual.html>`_ geometries. You will
+   provide three lists: `source_geometries`, `target_geometries`, and `obstacle_geometries`. What we are
+   analyzing is which of the source geometries are adjacent to which of the target geometries.
+   Obstacles can prevent a source and target from being adjacent, but they do not participate in the
+   adjacency dictionary.
+#. Create an AdjacencyEngine. In this case, we'll load the sample data which is available on
+   `Github <https://github.com/asmyth01/geo-adjacency/tree/main/Example/data>`_.
 
-   ..code-block:: python
+    .. code-block:: python
 
-      s, t, o = load_test_geoms("../tests/sample_data")
-      engine = AdjacencyEngine(s , t, o, True)
-#. Run the analysis
+       from matplotlib import pyplot as plt
+       from scipy.spatial import voronoi_plot_2d
+       from shapely.wkt import loads
 
-   .. code-block:: python
-   
-      output = engine.get_adjacency_dict()
-      # defaultdict(<class 'list'>, {0: [1, 2], 1: [1], 2: [1], 3: [2], 6: [1], 7: [1]})
+       from geo_adjacency.adjacency import AdjacencyEngine
+       import os.path
+       import json
+       from shapely.geometry import shape
 
-    The output is a dictionary. Keys are the indices of source geometries in the input list, and values are a list of indices of adjacent target geometries in the input list.
 
-#. You can visualize the output with a handy built-in method which uses pyplot.::
-   engine.plot_adjacency_dict(). (Source geoms are grey, targets are blue, obstacles are red. Linkages
+       def load_geojson(path):
+           with open(path) as f:
+               return [shape(feature["geometry"]) for feature in json.load(f)["features"]]
+
+
+       # Load the example data
+       data_dir = os.path.join(os.path.dirname(__file__), 'data')
+       source_path = os.path.join(data_dir, 'Buildings.geojson')
+       target_path = os.path.join(data_dir, 'Parks.geojson')
+       obstacle_path = os.path.join(data_dir, 'Roads.geojson')
+
+       source_geoms = load_geojson(source_path)
+       target_geoms = load_geojson(target_path)
+       obstacle_geoms = load_geojson(obstacle_path)
+
+       # Find buildings that are adjacent to parks, except where a road interferes.
+       engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms)
+       print(engine.get_adjacency_dict())
+
+
+
+#. You can visualize the output with a handy built-in method which uses pyplot. (Source geoms are grey, targets are blue, obstacles are red. Linkages
    are green.
+   .. code-block:: python
+       # plot the adjacency graph
+       engine.plot_adjacency_dict()
 
-   .. image:: images/adjacency_with_segmentation.png
+   .. image:: images/example/source-target-obstacle.png
 
 #. You probably will want to match the adjacency dictionary back to the original data so that you can do something cool with it.
 
@@ -34,3 +62,5 @@ This guide will get you up and running with adjacency analysis quickly.
           target_geoms = [target_geometries[i] for i in target_i_list]
 
 That's it!
+
+See :doc:`Examples <../Examples>` for more details and additional features and settings.
