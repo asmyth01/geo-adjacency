@@ -141,6 +141,7 @@ We should set a maximum distance to ensure that we aren't getting linkages furth
 distance. This adds a bit of processing time, but is still reasonably fast.
 
    .. code-block:: python
+
       engine = AdjacencyEngine(source_geoms, target_geoms, **{"max_distance": 0.001})
       engine.plot_adjacency_dict()
 
@@ -166,6 +167,7 @@ serves two purposes.
 Let's run the building footprint analysis again with a bounding box.
 
    .. code-block:: python
+
       engine = AdjacencyEngine(source_geoms, **{"bounding_box": (-122.33872, 47.645, -122.33391, 47.65)})
       engine.plot_adjacency_dict()
 

@@ -26,6 +26,7 @@ with Poetry. Installation of Poetry is covered `here`_.
 Or use `build`
 
 .. code-block:: bash
+
    git clone git@github.com:asmyth01/geo-adjacency.git
    cd geo-adjacency
    python -m build .
