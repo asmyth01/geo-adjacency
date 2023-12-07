@@ -6,7 +6,7 @@ This guide will get you up and running with adjacency analysis quickly.
 #. Load the data. geo-adjacency expects you to provide your data as Shapely geometries. You will provide three lists: source_geoemtries, target_geometries, and obstacle_geometries. What we are analyzing is which of the source geometries are adjacent to which of the target geometries. Obstacles can prevent a source and target from being adjacent, but they do not participate in the adjacency dictionary.
 #. Create an AdjacencyEngine. In this case, we'll load the sample data which is available on `Github <https://github.com/asmyth01/geo-adjacency/>`_.
 
-   .. code-block:: python
+   ..code-block:: python
 
       s, t, o = load_test_geoms("../tests/sample_data")
       engine = AdjacencyEngine(s , t, o, True)
