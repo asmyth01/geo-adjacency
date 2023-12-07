@@ -189,7 +189,7 @@ class AdjacencyEngine:
         "_all_features",
         "_all_coordinates",
         "_max_distance",
-        "_bounding_rectangle"
+        "_bounding_rectangle",
     )
 
     def __init__(
@@ -235,7 +235,9 @@ class AdjacencyEngine:
 
         if kwargs.get("bounding_box", None):
             minx, miny, maxx, maxy = kwargs.get("bounding_box")
-            assert minx < maxx and miny < maxy, "Bounding box must have minx < maxx and miny < maxy"
+            assert (
+                minx < maxx and miny < maxy
+            ), "Bounding box must have minx < maxx and miny < maxy"
             self._bounding_rectangle: Polygon = box(minx, miny, maxx, maxy)
         else:
             self._bounding_rectangle = None
@@ -481,11 +483,23 @@ class AdjacencyEngine:
         """
         min_overlapping_voronoi_vertices = 2
         for source_index, source_feature in enumerate(source_set):
-            if self._bounding_rectangle is not None and not self._bounding_rectangle.intersects(source_feature.geometry):
+            if (
+                self._bounding_rectangle is not None
+                and not self._bounding_rectangle.intersects(source_feature.geometry)
+            ):
                 continue
             for target_index, target_feature in enumerate(target_set):
                 if source_feature != target_feature:
-                    if (self._max_distance is not None and source_feature.geometry.distance(target_feature.geometry) > self._max_distance) or ( self._bounding_rectangle is not None and not self._bounding_rectangle.intersects(target_feature.geometry)):
+                    if (
+                        self._max_distance is not None
+                        and source_feature.geometry.distance(target_feature.geometry)
+                        > self._max_distance
+                    ) or (
+                        self._bounding_rectangle is not None
+                        and not self._bounding_rectangle.intersects(
+                            target_feature.geometry
+                        )
+                    ):
                         continue
                     if source_feature._is_adjacent(
                         target_feature, min_overlapping_voronoi_vertices
