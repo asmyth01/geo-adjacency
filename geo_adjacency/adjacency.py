@@ -27,7 +27,7 @@ import numpy as np
 import shapely.ops
 from scipy.spatial import distance
 from scipy.spatial import Voronoi
-from shapely import LineString, Point, Polygon, MultiPolygon
+from shapely import LineString, Point, Polygon, MultiPolygon, box
 from shapely.geometry.base import BaseGeometry
 
 from geo_adjacency.exception import ImmutablePropertyError
@@ -189,6 +189,7 @@ class AdjacencyEngine:
         "_all_features",
         "_all_coordinates",
         "_max_distance",
+        "_bounding_rectangle"
     )
 
     def __init__(
@@ -217,14 +218,27 @@ class AdjacencyEngine:
               max_segment_length is false, then the max_segment_length will be calculated based on
               the average segment length of all features, divided by 5.
             max_segment_length (Union[float, None], optional): The maximum distance between vertices
-            that we want iIn projection units. densify_features must be True, or an error will be thrown.
+              that we want iIn projection units. densify_features must be True, or an error will be thrown.
             max_distance (Union[float, None], optional): The maximum distance between two features
-            for them to be candidates for adjacency. Units are same as geometry coordinate system.
+              for them to be candidates for adjacency. Units are same as geometry coordinate system.
+            bounding_box (Union[float, float, float, float, None], optional): Set a bounding box
+              for the analysis. Only include features that intersect the box in the output.
+              This is useful for removing data from the edges from the final analysis, as these
+              are often not accurate. This is particularly helpful when analyzing a large data set
+              in a windowed fashion. Expected format is (minx, miny, maxx, maxy).
 
         """
+
         densify_features = kwargs.get("densify_features", False)
         max_segment_length = kwargs.get("max_segment_length", None)
         self._max_distance = kwargs.get("max_distance", None)
+
+        if kwargs.get("bounding_box", None):
+            minx, miny, maxx, maxy = kwargs.get("bounding_box")
+            assert minx < maxx and miny < maxy, "Bounding box must have minx < maxx and miny < maxy"
+            self._bounding_rectangle: Polygon = box(minx, miny, maxx, maxy)
+        else:
+            self._bounding_rectangle = None
 
         if max_segment_length and not densify_features:
             raise ValueError(
@@ -467,13 +481,11 @@ class AdjacencyEngine:
         """
         min_overlapping_voronoi_vertices = 2
         for source_index, source_feature in enumerate(source_set):
+            if self._bounding_rectangle is not None and not self._bounding_rectangle.intersects(source_feature.geometry):
+                continue
             for target_index, target_feature in enumerate(target_set):
                 if source_feature != target_feature:
-                    if (
-                        self._max_distance is not None
-                        and source_feature.geometry.distance(target_feature.geometry)
-                        > self._max_distance
-                    ):
+                    if (self._max_distance is not None and source_feature.geometry.distance(target_feature.geometry) > self._max_distance) or ( self._bounding_rectangle is not None and not self._bounding_rectangle.intersects(target_feature.geometry)):
                         continue
                     if source_feature._is_adjacent(
                         target_feature, min_overlapping_voronoi_vertices

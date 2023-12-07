@@ -186,3 +186,13 @@ def test_max_distance(source_geoms, target_geoms, obstacle_geoms):
     actual = engine.get_adjacency_dict()
     expected = {0: [0], 1: [1], 3: [4, 5], 4: [6], 6: [7]}
     assert actual == expected
+
+def test_bounding_rectangle(source_geoms, target_geoms, obstacle_geoms):
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"bounding_box": (0, 0, 16, 2)})
+    actual = engine.get_adjacency_dict()
+    expected = {0: [0], 1: [1], 2: [2, 3], 3: [3, 4]}
+    assert actual == expected
+
+def test_invalid_bounding_rectangle(source_geoms, target_geoms, obstacle_geoms):
+    with pytest.raises(AssertionError):
+        engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"bounding_box": (0, -1, 0, -1)})

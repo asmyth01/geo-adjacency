@@ -148,6 +148,30 @@ distance. This adds a bit of processing time, but is still reasonably fast.
 
 The undesired adjacency linkages are gone.
 
+Setting a Bounding Box: Windowed Analysis
+-----------------------------------------
+
+We can also set a bounding box around the features that we want to include in an analysis. This
+serves two purposes.
+
+#. We sometimes get weird results around the edges of the data. In the footprint example above,
+   the buildings at the north (top) end of the area were linked to a park simply because there was
+   no additional footprint data in the analysis to block those links.
+#. Suppose we wanted to analyze an entire city? That could potentially take a long time. We might
+   want to multi-thread that operation, or use a distributed computing framework like Apache Spark.
+   Setting a bounding box allows us to set a moving window over our data, analyzing one section at
+   a type with sensible overlaps between windows. The resulting adjacency dictionaries can be merged
+   at the end.
+
+Let's run the building footprint analysis again with a bounding box.
+
+   .. code-block:: python
+      engine = AdjacencyEngine(source_geoms, **{"bounding_box": (-122.33872, 47.645, -122.33391, 47.65)})
+      engine.plot_adjacency_dict()
+
+   .. image:: images/example/bounding_box.png
+
+The adjacency links are restricted to the red bounding box, giving us clean edges.
 
 Segmentization
 --------------

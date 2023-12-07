@@ -52,6 +52,13 @@ engine = AdjacencyEngine(source_geoms, target_geoms, **{"max_distance": 0.001})
 engine.plot_adjacency_dict()
 
 
+########################
+# Bounding box example #
+########################
+engine = AdjacencyEngine(source_geoms, **{"bounding_box": (-122.33872, 47.645, -122.33391, 47.65)})
+engine.plot_adjacency_dict()
+
+
 ##########################
 # Segmentization example #
 ##########################
