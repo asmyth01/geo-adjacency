@@ -130,6 +130,25 @@ Output:
 Roads are in red. Now we see far fewer adjacency linkages, except for a few buildings that
 seem to being inside the large park at the south end of the query area.
 
+Setting a Maximum Distance
+--------------------------
+
+In the above examples, we had some weird-looking adjacency links were building footprints from the
+far west (left) side of the area were linked to a park on the far east side. This is because there
+were no further geometries further to the north to stand between the park and these footprints.
+
+We should set a maximum distance to ensure that we aren't getting linkages further than a reasonable
+distance. This adds a bit of processing time, but is still reasonably fast.
+
+   .. code-block:: python
+      engine = AdjacencyEngine(source_geoms, target_geoms, **{"max_distance": 0.001})
+      engine.plot_adjacency_dict()
+
+   .. image:: images/example/max_distance.png
+
+The undesired adjacency linkages are gone.
+
+
 Segmentization
 --------------
 
@@ -160,7 +179,7 @@ can do the job.
 
    .. code-block:: python
 
-      engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, densify_features=True)
+      engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features"=True})
 
 Just set `densify_features` to True, and the AdjacencyEngine will calculate the average segment
 length of all input geometries and divide it by five. It then adds a point at that interval
@@ -178,7 +197,7 @@ It's also possible to specify your own segmentization interval:
 
    .. code-block:: python
 
-      engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, densify_features=True, max_segment_length=0.1)
+      engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features"=True, "max_segment_length"=0.1})
 
  .. warning:: Smaller `max_segment_length` values will potentially increase the accuracy of the
     diagram, but they will also increase processing time. Use the largest possible value.

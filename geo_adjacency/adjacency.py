@@ -48,8 +48,12 @@ c_handler: logging.StreamHandler = logging.StreamHandler()
 c_handler.setLevel(logging.WARNING)
 
 # Create formatters and add it to handlers
-c_format: logging.Formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
-f_format: logging.Formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+c_format: logging.Formatter = logging.Formatter(
+    "%(name)s - %(levelname)s - %(message)s"
+)
+f_format: logging.Formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 c_handler.setFormatter(c_format)
 
 # Add handlers to the logger
@@ -61,6 +65,7 @@ class _Feature:
     A _Feature is a wrapper around a Shapely geometry that allows us to easily determine if two
     geometries are adjacent.
     """
+
     __slots__ = ("_geometry", "_coords", "voronoi_points")
 
     def __init__(self, geometry: BaseGeometry):
@@ -77,7 +82,9 @@ class _Feature:
                 "Cannot create _Feature for geometry type '%s'." % type(geometry)
             )
 
-        assert geometry.is_valid, "Could not process invalid geometry: %s" % geometry.wkt
+        assert geometry.is_valid, (
+            "Could not process invalid geometry: %s" % geometry.wkt
+        )
 
         self._geometry: BaseGeometry = geometry
         self._coords: Union[List[Tuple[float, float]], None] = None
@@ -181,6 +188,7 @@ class AdjacencyEngine:
         "_vor",
         "_all_features",
         "_all_coordinates",
+        "_max_distance",
     )
 
     def __init__(
@@ -188,8 +196,7 @@ class AdjacencyEngine:
         source_geoms: List[BaseGeometry],
         target_geoms: Union[List[BaseGeometry], None] = None,
         obstacle_geoms: Union[List[BaseGeometry], None] = None,
-        densify_features: bool = False,
-        max_segment_length: Union[float, None] = None,
+        **kwargs,
     ):
         """
          Note: only Multipolygons, Polygons, LineStrings and Points are supported. It is assumed all
@@ -203,13 +210,21 @@ class AdjacencyEngine:
             obstacle_geoms (Union[List[BaseGeometry], None]), optional): List
         of Shapely geometries. These features will not be tested for adjacency, but they can
         prevent a source and target feature from being adjacent.
-            densify_features (bool, optional):  If
-        True, we will add additional points to the features to improve accuracy of the voronoi
-        diagram. If densify_features is True and max_segment_length is false, then the max_segment_length
-        will be calculated based on the average segment length of all features, divided by 5.
-            max_segment_length (Union[float, None], optional): The maximum distance between vertices that we want.
-        In projection units. densify_features must be True, or an error will be thrown.
+
+        Keyword Args:
+            densify_features (bool, optional):  If True, we will add additional points to the
+              features to improve accuracy of the voronoi diagram. If densify_features is True and
+              max_segment_length is false, then the max_segment_length will be calculated based on
+              the average segment length of all features, divided by 5.
+            max_segment_length (Union[float, None], optional): The maximum distance between vertices
+            that we want iIn projection units. densify_features must be True, or an error will be thrown.
+            max_distance (Union[float, None], optional): The maximum distance between two features
+            for them to be candidates for adjacency. Units are same as geometry coordinate system.
+
         """
+        densify_features = kwargs.get("densify_features", False)
+        max_segment_length = kwargs.get("max_segment_length", None)
+        self._max_distance = kwargs.get("max_distance", None)
 
         if max_segment_length and not densify_features:
             raise ValueError(
@@ -398,7 +413,9 @@ class AdjacencyEngine:
     def vor(self, _):
         raise ImmutablePropertyError("Property vor is immutable.")
 
-    def _get_voronoi_vertex_idx_for_coord_idx(self, feature_coord_index: int) -> Generator[int, None, None]:
+    def _get_voronoi_vertex_idx_for_coord_idx(
+        self, feature_coord_index: int
+    ) -> Generator[int, None, None]:
         """
         For a given feature coordinate index, return the indices of the voronoi vertices. Ignore
         any "-1"s, which indicate vertices at infinity; these provide no adjacency information.
@@ -409,7 +426,11 @@ class AdjacencyEngine:
         Returns:
             Generator[int, None, None]: A generator of the indices of the voronoi vertices.
         """
-        return (i for i in self.vor.regions[self.vor.point_region[feature_coord_index]] if i != -1)
+        return (
+            i
+            for i in self.vor.regions[self.vor.point_region[feature_coord_index]]
+            if i != -1
+        )
 
     def _tag_feature_with_voronoi_vertices(self):
         """
@@ -447,10 +468,17 @@ class AdjacencyEngine:
         min_overlapping_voronoi_vertices = 2
         for source_index, source_feature in enumerate(source_set):
             for target_index, target_feature in enumerate(target_set):
-                if source_feature != target_feature and source_feature._is_adjacent(
-                    target_feature, min_overlapping_voronoi_vertices
-                ):
-                    self._adjacency_dict[source_index].append(target_index)
+                if source_feature != target_feature:
+                    if (
+                        self._max_distance is not None
+                        and source_feature.geometry.distance(target_feature.geometry)
+                        > self._max_distance
+                    ):
+                        continue
+                    if source_feature._is_adjacent(
+                        target_feature, min_overlapping_voronoi_vertices
+                    ):
+                        self._adjacency_dict[source_index].append(target_index)
 
     def get_adjacency_dict(self) -> Dict[int, List[int]]:
         """
