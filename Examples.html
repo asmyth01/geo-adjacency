@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples &mdash; geo-adjacency 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="canonical" href="https://asmyth01.github.io/geo-adjacency/Examples.html" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=6efca38a"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="geo_adjacency" href="Modules.html" />
+    <link rel="prev" title="Methodology" href="Methodology.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            geo-adjacency
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Methodology.html">Methodology</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#building-footprints-in-seattle">Building Footprints in Seattle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#source-source-adjacency">Source-Source Adjacency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#source-target-adjacency">Source-Target Adjacency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#source-target-obstacle-adjacency">Source-Target-Obstacle Adjacency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-a-maximum-distance">Setting a Maximum Distance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-a-bounding-box-windowed-analysis">Setting a Bounding Box: Windowed Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#segmentization">Segmentization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Modules.html">geo_adjacency</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">geo-adjacency</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/Examples.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h1>
+<section id="building-footprints-in-seattle">
+<h2>Building Footprints in Seattle<a class="headerlink" href="#building-footprints-in-seattle" title="Link to this heading"></a></h2>
+<p>In this example, we’ll create an adjacency analysis of some building footprint data in an area
+of Seattle near Gasworks Park. Footprint data is great for this demonstration because no two
+features intersect. We’ll use the free Microsoft building footprint dataset, available via ArcGIS
+<a class="reference external" href="https://hub.arcgis.com/datasets/esri::microsoft-building-footprints-features/explore?location=47.646982%2C-122.334361%2C17.29">here</a>.</p>
+<blockquote>
+<div><img alt="_images/SeattleFootprints.png" src="_images/SeattleFootprints.png" />
+</div></blockquote>
+<p>We’ll also bring in a park polygon for Gasworks Park, and also the road network so we can see how
+different inputs can lead to different interpretations of adjacency.</p>
+</section>
+<section id="source-source-adjacency">
+<h2>Source-Source Adjacency<a class="headerlink" href="#source-source-adjacency" title="Link to this heading"></a></h2>
+<p>The simplest case is determining adjacency between features within the same set. We’ll called this
+“source-source” adjacency. Our source features will be the building footprints, so we’ll
+determine which buildings are next to other buildings.</p>
+<p>First, let’s do a little setup. The example data can be found in the geo-adjacency repo on GitHub.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">geo_adjacency.adjacency</span> <span class="kn">import</span> <span class="n">AdjacencyEngine</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">shape</span>
+
+<span class="c1"># Load GeoJSON geometries into a list of Shapely geometries</span>
+<span class="k">def</span> <span class="nf">load_geojson</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">shape</span><span class="p">(</span><span class="n">feature</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)[</span><span class="s2">&quot;features&quot;</span><span class="p">]]</span>
+
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">source_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;Buildings.geojson&#39;</span><span class="p">)</span>
+<span class="n">target_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;Parks.geojson&#39;</span><span class="p">)</span>
+<span class="n">obstacle_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;Roads.geojson&#39;</span><span class="p">)</span>
+
+<span class="c1"># Note: the source data was cleaned up to remove z coordinates.</span>
+<span class="n">source_geoms</span> <span class="o">=</span> <span class="n">load_geojson</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
+<span class="n">target_geoms</span> <span class="o">=</span> <span class="n">load_geojson</span><span class="p">(</span><span class="n">target_path</span><span class="p">)</span>
+<span class="n">obstacle_geoms</span> <span class="o">=</span> <span class="n">load_geojson</span><span class="p">(</span><span class="n">obstacle_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>This code loads the sample data, which is in GeoJSON format.</p>
+<p>Next, create the engine, and visualize the analysis</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">)</span>
+<span class="n">adjacency_dict</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_adjacency_dict</span><span class="p">()</span>
+<span class="c1"># defaultdict(&lt;class &#39;list&#39;&gt;, {0: [7, 90, 98, 101], 1: [54, 59, 136, 221], 2: [10, 137, ... ]})</span>
+<span class="n">engine</span><span class="o">.</span><span class="n">plot_adjacency_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>First we get the dictionary of adjacency links. The keys and values point to features in the list
+of source_geoms by their indices.</p>
+<p>We also get the following visualization:</p>
+<blockquote>
+<div><img alt="_images/source-source.png" src="_images/source-source.png" />
+</div></blockquote>
+<p>If we zoom in, we can see additional detail. Each green line connects one building to an adjacent
+one.</p>
+<blockquote>
+<div><img alt="_images/source-source-closeup.png" src="_images/source-source-closeup.png" />
+</div></blockquote>
+<p>If we want, we can inspect the Voronoi diagram used in the analysis. This can be very useful for debugging.
+(See <a class="reference internal" href="Methodology.html"><span class="doc">Methodology</span></a>)</p>
+<blockquote>
+<div><img alt="_images/source-source-voronoi.png" src="_images/source-source-voronoi.png" />
+</div></blockquote>
+<p>Here, each region is the area of the plane which is closer to each input point (blue here)
+than to any other. The vertices of the Voronoi regions are in orange.</p>
+<p>We determine adjacency by taking the set of all Voronoi regions belonging to a building
+polygon when we break that polygon into its vertices. Then we see if two or more
+Voronoi region vertices are shared with any other building.</p>
+<p>If you want to determine why you are getting unexpected results, consult this diagram. It’s
+possible that the source data needs some modifications to produce the desired results.</p>
+</section>
+<section id="source-target-adjacency">
+<h2>Source-Target Adjacency<a class="headerlink" href="#source-target-adjacency" title="Link to this heading"></a></h2>
+<p>Sometimes we want to look for the adjacency relationships between two separate sets of
+geometries, rather than within a single set. We’ll call this scenario source-target adjacency.</p>
+<p>In our example, we can continue to use building footprints as our source geometries, but
+add nearby parks as our targets. After all, it’s pretty nice to live with a view
+of a lovely park out your window!</p>
+<p>Our setup is very similar to before.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="n">target_geoms</span><span class="p">)</span>
+<span class="n">engine</span><span class="o">.</span><span class="n">plot_adjacency_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>And here’s the output:</p>
+<blockquote>
+<div><img alt="_images/source-target.png" src="_images/source-target.png" />
+</div></blockquote>
+<p>Source features are in gray. Target features (parks) are outlined in blue. Adjacency
+links are in green, as before.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>As of version 1.1.x, there is no maximum distance parameter. This will be added in version 1.2.x</p>
+</div>
+</section>
+<section id="source-target-obstacle-adjacency">
+<h2>Source-Target-Obstacle Adjacency<a class="headerlink" href="#source-target-obstacle-adjacency" title="Link to this heading"></a></h2>
+<p>Ok great, we know which buildings are next to parks. But what if I don’t want to walk
+across the street to get to a park? Let’s add some obstacles.</p>
+<p>We’ll use some free Open Street Map road data to act as obstacles. These geometries will
+be part of the Voronoi diagram, but we won’t include them in the output, since we don’t
+care what our adjacency relationship with obstacles is.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="n">target_geoms</span><span class="p">,</span> <span class="n">obstacle_geoms</span><span class="p">)</span>
+<span class="n">engine</span><span class="o">.</span><span class="n">plot_adjacency_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Output:</p>
+<blockquote>
+<div><img alt="_images/source-target-obstacle.png" src="_images/source-target-obstacle.png" />
+</div></blockquote>
+<p>Roads are in red. Now we see far fewer adjacency linkages, except for a few buildings that
+seem to being inside the large park at the south end of the query area.</p>
+</section>
+<section id="setting-a-maximum-distance">
+<h2>Setting a Maximum Distance<a class="headerlink" href="#setting-a-maximum-distance" title="Link to this heading"></a></h2>
+<p>In the above examples, we had some weird-looking adjacency links were building footprints from the
+far west (left) side of the area were linked to a park on the far east side. This is because there
+were no further geometries further to the north to stand between the park and these footprints.</p>
+<p>We should set a maximum distance to ensure that we aren’t getting linkages further than a reasonable
+distance. This adds a bit of processing time, but is still reasonably fast.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="n">target_geoms</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;max_distance&quot;</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">})</span>
+<span class="n">engine</span><span class="o">.</span><span class="n">plot_adjacency_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+<img alt="_images/max_distance.png" src="_images/max_distance.png" />
+</div></blockquote>
+<p>The undesired adjacency linkages are gone.</p>
+</section>
+<section id="setting-a-bounding-box-windowed-analysis">
+<h2>Setting a Bounding Box: Windowed Analysis<a class="headerlink" href="#setting-a-bounding-box-windowed-analysis" title="Link to this heading"></a></h2>
+<p>We can also set a bounding box around the features that we want to include in an analysis. This
+serves two purposes.</p>
+<ol class="arabic simple">
+<li><p>We sometimes get weird results around the edges of the data. In the footprint example above,
+the buildings at the north (top) end of the area were linked to a park simply because there was
+no additional footprint data in the analysis to block those links.</p></li>
+<li><p>Suppose we wanted to analyze an entire city? That could potentially take a long time. We might
+want to multi-thread that operation, or use a distributed computing framework like Apache Spark.
+Setting a bounding box allows us to set a moving window over our data, analyzing one section at
+a type with sensible overlaps between windows. The resulting adjacency dictionaries can be merged
+at the end.</p></li>
+</ol>
+<p>Let’s run the building footprint analysis again with a bounding box.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;bounding_box&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">122.33872</span><span class="p">,</span> <span class="mf">47.645</span><span class="p">,</span> <span class="o">-</span><span class="mf">122.33391</span><span class="p">,</span> <span class="mf">47.65</span><span class="p">)})</span>
+<span class="n">engine</span><span class="o">.</span><span class="n">plot_adjacency_dict</span><span class="p">()</span>
+</pre></div>
+</div>
+<img alt="_images/bounding_box.png" src="_images/bounding_box.png" />
+</div></blockquote>
+<p>The adjacency links are restricted to the red bounding box, giving us clean edges.</p>
+</section>
+<section id="segmentization">
+<h2>Segmentization<a class="headerlink" href="#segmentization" title="Link to this heading"></a></h2>
+<p>The Voronoi adjacency method often works well out of the box, but sometimes we get weird results.</p>
+<p>Take the following example. We have a single source, target, and obstacle geometry each.</p>
+<blockquote>
+<div><img alt="_images/segmentization_1.png" src="_images/segmentization_1.png" />
+</div></blockquote>
+<p>What’s going on here? There is a green adjacency link between the source and target, even
+though there is an obstacle that clearly stands between them.</p>
+<p>A look at the Voronoi diagram reveals the problem:</p>
+<blockquote>
+<div><img alt="_images/segmentization_voronoi.png" src="_images/segmentization_voronoi.png" />
+</div></blockquote>
+<p>Aha! It looks like our source and target polygons each have a superfluous vertex along their long sides,
+but the obstacle polygon doesn’t. As a result, the Voronoi regions for the source and target pass
+right through the center of the obstacle.</p>
+<p>This won’t do. Unfortunately, there isn’t a terrific way to efficiently create a perfect
+Voronoi diagram from a polygon. However, we can get a pretty good approximation by adding
+a few extra vertices along our input geometries to make them a bit more “solid.”</p>
+<p>You can certainly do this in pre-processing, and that will definitely give you the most control
+over the results. But in most cases, the AdjacencyEngine’s built-in segmentization feature
+can do the job.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="n">target_geoms</span><span class="p">,</span> <span class="n">obstacle_geoms</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;densify_features&quot;</span><span class="o">=</span><span class="kc">True</span><span class="p">})</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Just set <cite>densify_features</cite> to True, and the AdjacencyEngine will calculate the average segment
+length of all input geometries and divide it by five. It then adds a point at that interval
+along each geometry.</p>
+<p>The new Voronoi diagram is much denser:</p>
+<blockquote>
+<div><img alt="_images/segmentization_voronoi_2.png" src="_images/segmentization_voronoi_2.png" />
+</div></blockquote>
+<p>… and the adjacency link is now gone:</p>
+<blockquote>
+<div><img alt="_images/segmentization_2.png" src="_images/segmentization_2.png" />
+</div></blockquote>
+<p>It’s also possible to specify your own segmentization interval:</p>
+<blockquote>
+<div><blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="n">target_geoms</span><span class="p">,</span> <span class="n">obstacle_geoms</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;densify_features&quot;</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;max_segment_length&quot;</span><span class="o">=</span><span class="mf">0.1</span><span class="p">})</span>
+</pre></div>
+</div>
+</div></blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Smaller <cite>max_segment_length</cite> values will potentially increase the accuracy of the
+diagram, but they will also increase processing time. Use the largest possible value.</p>
+</div>
+</div></blockquote>
+<p>Data Sources</p>
+<p>Buildings: <a class="reference external" href="https://hub.arcgis.com/datasets/esri::microsoft-building-footprints-features/explore?location=47.646982%2C-122.334361%2C17.29">https://hub.arcgis.com/datasets/esri::microsoft-building-footprints-features/explore?location=47.646982%2C-122.334361%2C17.29</a></p>
+<p>Parks: <a class="reference external" href="https://data.seattle.gov/City-Business/Seattle-Parks-and-Recreation-GIS-Map-Layer-Web-Ser/7kzh-zp2d">https://data.seattle.gov/City-Business/Seattle-Parks-and-Recreation-GIS-Map-Layer-Web-Ser/7kzh-zp2d</a></p>
+<p>Roads: <a class="reference external" href="https://www.openstreetmap.org/export">https://www.openstreetmap.org/export</a></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Methodology.html" class="btn btn-neutral float-left" title="Methodology" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Modules.html" class="btn btn-neutral float-right" title="geo_adjacency" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Andrew Smyth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

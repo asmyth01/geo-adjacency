@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>geo_adjacency package &mdash; geo-adjacency 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="canonical" href="https://asmyth01.github.io/geo-adjacency/geo_adjacency.html" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=6efca38a"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="geo_adjacency" href="Modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            geo-adjacency
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Methodology.html">Methodology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Modules.html">geo_adjacency</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">geo-adjacency</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="Modules.html">geo_adjacency</a></li>
+      <li class="breadcrumb-item active">geo_adjacency package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/geo_adjacency.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="geo-adjacency-package">
+<h1>geo_adjacency package<a class="headerlink" href="#geo-adjacency-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-geo_adjacency.adjacency">
+<span id="geo-adjacency-adjacency-module"></span><h2>geo_adjacency.adjacency module<a class="headerlink" href="#module-geo_adjacency.adjacency" title="Link to this heading"></a></h2>
+<p>The <cite>adjacency</cite> module implements the AdjacencyEngine class,
+which allows us to calculate adjacency relationships. Adjacency relationships are between a set of source geometries,
+or between source geometries and a second set of target geometries. Obstacle geometries can be passed in to
+stand between sources or sources and targets, but they are not included in the output.</p>
+<p>For example, if we wanted to know what trees in a forest are adjacent to the shore of a lake, we could
+pass in a set of Point geometries to the trees, a Polygon to represent the lake, and a LineString to represent
+a road passing between some of the trees and the shore.</p>
+<p><cite>AdjacencyEngine</cite> utilizes a Voronoi diagram of all the vertices in all the geometries combined to determine
+which geometries are adjacent to each other. See</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">geo_adjacency.adjacency.</span></span><span class="sig-name descname"><span class="pre">AdjacencyEngine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_geoms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">shapely.geometry.base.BaseGeometry</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_geoms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">shapely.geometry.base.BaseGeometry</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obstacle_geoms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">shapely.geometry.base.BaseGeometry</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class for calculating the adjacency of a set of geometries to another geometry or set
+of geometries, given a set of obstacles, within a given radius.</p>
+<p>First, the Voronoi diagram is generated for each geometry and obstacle. Then, we check which
+voronoi shapes intersect one another. If they do, then the two underlying geometries are
+adjacent.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.all_coordinates">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">all_coordinates</span></span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.all_coordinates" title="Link to this definition"></a></dt>
+<dd><p>All source, target, and obstacle coordinates in a single list. The order of this list must
+not be changed. This property cannot be set manually.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of coordinate tuples.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[tuple[float, float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.all_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">all_features</span></span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.all_features" title="Link to this definition"></a></dt>
+<dd><p>All source, target, and obstacle features in a single list. The order of this list must
+not be changed. This property cannot be set manually.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of _Features.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[_Feature]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.get_adjacency_dict">
+<span class="sig-name descname"><span class="pre">get_adjacency_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.get_adjacency_dict" title="Link to this definition"></a></dt>
+<dd><p>Returns a dictionary of indices. They keys are the indices of feature_geoms. The values
+are the indices of any target geometries which are adjacent to the feature_geoms.</p>
+<p>If no targets were specified, then calculate adjacency between source features and other
+source features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A dictionary of indices. The keys are the indices of feature_geoms. The
+values are the indices of any adjacent features.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.get_feature_from_coord_index">
+<span class="sig-name descname"><span class="pre">get_feature_from_coord_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Feature</span></span></span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.get_feature_from_coord_index" title="Link to this definition"></a></dt>
+<dd><p>A list which is the length of self._all_coordinates. For each coordinate, we add the
+index of the corresponding feature from the list self.all_features. This is used to
+determine which coordinate belongs to which feature after we calculate the voronoi
+diagram.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>coord_index</strong> (<em>int</em>) – The index of the coordinate in self._all_coordinates</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A _Feature at the given index.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>_Feature</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.obstacle_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">obstacle_features</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">_Feature</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.obstacle_features" title="Link to this definition"></a></dt>
+<dd><p>Features which can prevent source and target features from being adjacent. They
+Do not participate in the adjacency_dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of _Features.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[_Feature]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.plot_adjacency_dict">
+<span class="sig-name descname"><span class="pre">plot_adjacency_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.plot_adjacency_dict" title="Link to this definition"></a></dt>
+<dd><p>Plot the adjacency linkages between the source and target with pyplot. Runs the analysis if
+it has not already been run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.source_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source_features</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">_Feature</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.source_features" title="Link to this definition"></a></dt>
+<dd><p>Features which will be the keys in the adjacency_dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of _Features.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>List[_Feature]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.target_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">target_features</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">_Feature</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.target_features" title="Link to this definition"></a></dt>
+<dd><p>Features which will be the values in the adjacency_dict.
+:returns: A list of _Features.
+:rtype: List[_Feature]</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="geo_adjacency.adjacency.AdjacencyEngine.vor">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">vor</span></span><a class="headerlink" href="#geo_adjacency.adjacency.AdjacencyEngine.vor" title="Link to this definition"></a></dt>
+<dd><p>The Voronoi diagram object returned by Scipy. Useful primarily for debugging an
+adjacency analysis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The Scipy Voronoi object.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>scipy.spatial.Voronoi</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-geo_adjacency.exception">
+<span id="geo-adjacency-exception-module"></span><h2>geo_adjacency.exception module<a class="headerlink" href="#module-geo_adjacency.exception" title="Link to this heading"></a></h2>
+<p>Custom exceptions.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="geo_adjacency.exception.ImmutablePropertyError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">geo_adjacency.exception.</span></span><span class="sig-name descname"><span class="pre">ImmutablePropertyError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geo_adjacency.exception.ImmutablePropertyError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseException</span></code></p>
+<p>Raise when a property is immutable because the setter does nothing.</p>
+</dd></dl>
+
+</section>
+<section id="module-geo_adjacency.utils">
+<span id="geo-adjacency-utils-module"></span><h2>geo_adjacency.utils module<a class="headerlink" href="#module-geo_adjacency.utils" title="Link to this heading"></a></h2>
+<p>Utility functions. These are designed for use in the AdjacencyEngine only, and should not be called
+by end users.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="geo_adjacency.utils.add_geometry_to_plot">
+<span class="sig-prename descclassname"><span class="pre">geo_adjacency.utils.</span></span><span class="sig-name descname"><span class="pre">add_geometry_to_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geoms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'black'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#geo_adjacency.utils.add_geometry_to_plot" title="Link to this definition"></a></dt>
+<dd><p>When updating the test data, it may be useful to visualize it. Add a geometry to the global
+maplotlib plt object. The next time we call plt.show(), this geometry will be plotted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geoms</strong> (<em>List</em><em>[</em><em>BaseGeometry</em><em>]</em>) – A list of Shapely geometries.</p></li>
+<li><p><strong>color</strong> (<em>str</em>) – The color we want the geometry to be in the plot.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="geo_adjacency.utils.coords_from_multipolygon">
+<span class="sig-prename descclassname"><span class="pre">geo_adjacency.utils.</span></span><span class="sig-name descname"><span class="pre">coords_from_multipolygon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">multipolygon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.MultiPolygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#geo_adjacency.utils.coords_from_multipolygon" title="Link to this definition"></a></dt>
+<dd><p>Convert a MultiPolygon into a list of (x, y) tuples. Does not repeat the first coordinate to
+close the ring.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>multipolygon</strong> (<em>MultiPolygon</em>) – A Shapely MultiPolygon.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of coordinate tuples.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Tuple[float, float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="geo_adjacency.utils.coords_from_point">
+<span class="sig-prename descclassname"><span class="pre">geo_adjacency.utils.</span></span><span class="sig-name descname"><span class="pre">coords_from_point</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Point</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#geo_adjacency.utils.coords_from_point" title="Link to this definition"></a></dt>
+<dd><p>Convert a Point into a tuple of (x, y). We put this inside a list for consistency with other
+coordinate methods to allow us to seamlessly merge them later.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>point</strong> (<em>Point</em>) – A Shapely Point.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of coordinate tuples.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Tuple[float, float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="geo_adjacency.utils.coords_from_polygon">
+<span class="sig-prename descclassname"><span class="pre">geo_adjacency.utils.</span></span><span class="sig-name descname"><span class="pre">coords_from_polygon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">polygon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Polygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#geo_adjacency.utils.coords_from_polygon" title="Link to this definition"></a></dt>
+<dd><p>Convert a Polygon into a list of (x, y) tuples. Does not repeat the first coordinate to close
+the ring.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>polygon</strong> (<em>Polygon</em>) – A Shapely Polygon.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of coordinate tuples.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Tuple[float, float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="geo_adjacency.utils.coords_from_ring">
+<span class="sig-prename descclassname"><span class="pre">geo_adjacency.utils.</span></span><span class="sig-name descname"><span class="pre">coords_from_ring</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ring</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.LineString</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#geo_adjacency.utils.coords_from_ring" title="Link to this definition"></a></dt>
+<dd><p>Convert a LinearRing into a list of (x, y) tuples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ring</strong> (<em>LineString</em>) – A Shapely LinearString.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of coordinate tuples.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Tuple[float, float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="geo_adjacency.utils.flatten_list">
+<span class="sig-prename descclassname"><span class="pre">geo_adjacency.utils.</span></span><span class="sig-name descname"><span class="pre">flatten_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nested_list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span></span></span><a class="headerlink" href="#geo_adjacency.utils.flatten_list" title="Link to this definition"></a></dt>
+<dd><p>Flatten a list of lists.
+:param nested_list: A list of lists.
+:type nested_list: List</p>
+<p>Returns:</p>
+</dd></dl>
+
+</section>
+<section id="module-geo_adjacency">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-geo_adjacency" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Modules.html" class="btn btn-neutral float-left" title="geo_adjacency" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Andrew Smyth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

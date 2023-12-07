@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quickstart &mdash; geo-adjacency 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="canonical" href="https://asmyth01.github.io/geo-adjacency/Quickstart.html" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=6efca38a"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Methodology" href="Methodology.html" />
+    <link rel="prev" title="Installation" href="Install.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            geo-adjacency
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Methodology.html">Methodology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Modules.html">geo_adjacency</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">geo-adjacency</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quickstart</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/Quickstart.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading"></a></h1>
+<p>This guide will get you up and running with adjacency analysis quickly.</p>
+<ol class="arabic">
+<li><p>Load the data. <cite>geo-adjacency</cite> expects you to provide your data as
+<a class="reference external" href="https://shapely.readthedocs.io/en/stable/manual.html">Shapely</a> geometries. You will
+provide three lists: <cite>source_geometries</cite>, <cite>target_geometries</cite>, and <cite>obstacle_geometries</cite>. What we are
+analyzing is which of the source geometries are adjacent to which of the target geometries.
+Obstacles can prevent a source and target from being adjacent, but they do not participate in the
+adjacency dictionary.</p></li>
+<li><p>Create an AdjacencyEngine. In this case, we’ll load the sample data which is available on
+<a class="reference external" href="https://github.com/asmyth01/geo-adjacency/tree/main/Example/data">Github</a>.</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="kn">import</span> <span class="n">voronoi_plot_2d</span>
+<span class="kn">from</span> <span class="nn">shapely.wkt</span> <span class="kn">import</span> <span class="n">loads</span>
+
+<span class="kn">from</span> <span class="nn">geo_adjacency.adjacency</span> <span class="kn">import</span> <span class="n">AdjacencyEngine</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">shape</span>
+
+
+<span class="k">def</span> <span class="nf">load_geojson</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">shape</span><span class="p">(</span><span class="n">feature</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)[</span><span class="s2">&quot;features&quot;</span><span class="p">]]</span>
+
+
+<span class="c1"># Load the example data</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">source_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;Buildings.geojson&#39;</span><span class="p">)</span>
+<span class="n">target_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;Parks.geojson&#39;</span><span class="p">)</span>
+<span class="n">obstacle_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;Roads.geojson&#39;</span><span class="p">)</span>
+
+<span class="n">source_geoms</span> <span class="o">=</span> <span class="n">load_geojson</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
+<span class="n">target_geoms</span> <span class="o">=</span> <span class="n">load_geojson</span><span class="p">(</span><span class="n">target_path</span><span class="p">)</span>
+<span class="n">obstacle_geoms</span> <span class="o">=</span> <span class="n">load_geojson</span><span class="p">(</span><span class="n">obstacle_path</span><span class="p">)</span>
+
+<span class="c1"># Find buildings that are adjacent to parks, except where a road interferes.</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">AdjacencyEngine</span><span class="p">(</span><span class="n">source_geoms</span><span class="p">,</span> <span class="n">target_geoms</span><span class="p">,</span> <span class="n">obstacle_geoms</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">engine</span><span class="o">.</span><span class="n">get_adjacency_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>You can visualize the output with a handy built-in method which uses pyplot. (Source geoms are grey, targets are blue, obstacles are red. Linkages
+are green.
+.. code-block:: python</p>
+<blockquote>
+<div><p># plot the adjacency graph
+engine.plot_adjacency_dict()</p>
+</div></blockquote>
+<img alt="_images/source-target-obstacle.png" src="_images/source-target-obstacle.png" />
+</li>
+<li><p>You probably will want to match the adjacency dictionary back to the original data so that you can do something cool with it.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">source_i</span><span class="p">,</span> <span class="n">target_i_list</span> <span class="ow">in</span> <span class="n">output</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">source_geom</span> <span class="o">=</span> <span class="n">source_geometries</span><span class="p">[</span><span class="n">source_i</span><span class="p">]</span>
+    <span class="n">target_geoms</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_geometries</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">target_i_list</span><span class="p">]</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p>That’s it!</p>
+<p>See <a class="reference internal" href="Examples.html"><span class="doc">Examples</span></a> for more details and additional features and settings.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Install.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Methodology.html" class="btn btn-neutral float-right" title="Methodology" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Andrew Smyth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
