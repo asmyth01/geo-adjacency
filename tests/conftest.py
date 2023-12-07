@@ -1,9 +1,11 @@
-from scipy.spatial import voronoi_plot_2d
-from shapely import LineString, Polygon, MultiPolygon, Point
-from shapely.wkt import loads
-import matplotlib.pyplot as plt
+"""
+Reusable fixtures for testing. All fixtures in this repo will be available in all test modules
+without explicit importing.
+"""
 
-from geo_adjacency import adjacency
+import pytest
+from shapely.wkt import loads
+from geo_adjacency.adjacency import _Feature
 
 # A list of rectangular polygon WKTs with a small space between each. Order is clockwise
 source_wkts = [
@@ -24,7 +26,7 @@ target_wkts = [
     "POINT(12 2)",
     "POLYGON((15 2, 15 3, 17 3, 17 2, 15 2))",
     "POLYGON((18 2, 18 3, 20 3, 20 2, 18 2))",
-    "LINESTRING(21 2, 26 2)", # i[1] == 46
+    "LINESTRING(21 2, 26 2)",  # i[1] == 46
     "MULTIPOLYGON(((27 2, 27 3, 29 3, 29 2, 27 2)), ((30 2, 30 3, 32 3, 32 2, 30 2)))"
 ]
 
@@ -36,24 +38,34 @@ obstacle_wkts = [
 ]
 
 
-source_geoms = [loads(wkt) for wkt in source_wkts]
-target_geoms = [loads(wkt) for wkt in target_wkts]
-obstacle_geoms = [loads(wkt) for wkt in obstacle_wkts]
+@pytest.fixture
+def source_geoms():
+    return [loads(wkt) for wkt in source_wkts]
 
-# engine = adjacency.AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, True, 0.1)
-# voronoi_plot_2d(engine.vor)
-# plt.show()
-# plt.scatter(*zip(*engine.all_coordinates))
-# plt.show()
-# actual = engine.get_adjacency_dict()
-# engine.plot_adjacency_dict()
 
-# # Visualize the test data with pyplot
-# add_geometry_to_plot(source_geoms, color="green")
-# add_geometry_to_plot(target_geoms, color="blue")
-# add_geometry_to_plot(obstacle_geoms, color="red")
-#
-# plt.title("Test data")
-# plt.xlabel("Longitude")
-# plt.ylabel("Latitude")
-# plt.show()
+@pytest.fixture
+def target_geoms():
+    return [loads(wkt) for wkt in target_wkts]
+
+
+@pytest.fixture
+def obstacle_geoms():
+    return [loads(wkt) for wkt in obstacle_wkts]
+
+
+@pytest.fixture()
+def point_geom_a():
+    return loads("POINT (30 10)")
+
+
+@pytest.fixture
+def point_geom_b():
+    return loads("POINT (10 10)")
+
+@pytest.fixture
+def point_feature_a(point_geom_a):
+    return _Feature(point_geom_a)
+
+@pytest.fixture
+def point_feature_b(point_geom_b):
+    return _Feature(point_geom_b)

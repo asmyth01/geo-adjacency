@@ -6,3 +6,4 @@
 doc/_build/*
 dist/*
 _build/*
+*.coverage
