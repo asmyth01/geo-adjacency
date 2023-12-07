@@ -12,7 +12,7 @@ import sys
 project = 'geo-adjacency'
 copyright = '2023, Andrew Smyth'
 author = 'Andrew Smyth'
-release = '1.1.1'
+release = '1.1.2'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
