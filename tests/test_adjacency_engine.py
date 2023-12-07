@@ -66,7 +66,7 @@ def test_all_coordinates(source_geoms, target_geoms, obstacle_geoms):
 
 
 def test_get_adjacency_dict_with_targets_and_obstacles(source_geoms, target_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, True, 0.1)
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": True, "max_segment_length": 0.1})
     actual = engine.get_adjacency_dict()
     expected = {0: [0],
              1: [1, 2],
@@ -80,7 +80,7 @@ def test_get_adjacency_dict_with_targets_and_obstacles(source_geoms, target_geom
 
 
 def test_get_adjacency_dict_with_source_only(source_geoms):
-    engine = AdjacencyEngine(source_geoms, None, None, True, 0.1)
+    engine = AdjacencyEngine(source_geoms, None, None, **{"densify_features": True, "max_segment_length": 0.1})
     actual = engine.get_adjacency_dict()
     expected = {0: [1],
              1: [0, 2],
@@ -94,7 +94,7 @@ def test_get_adjacency_dict_with_source_only(source_geoms):
 
 
 def test_get_adjacency_dict_with_source_and_obstacles(source_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, None, obstacle_geoms, True, 0.1)
+    engine = AdjacencyEngine(source_geoms, None, obstacle_geoms, **{"densify_features": True, "max_segment_length": 0.1})
     actual = engine.get_adjacency_dict()
     expected = {0: [1],
              1: [0, 2],
@@ -108,7 +108,7 @@ def test_get_adjacency_dict_with_source_and_obstacles(source_geoms, obstacle_geo
 
 
 def test_vor(source_geoms, target_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, False)
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": False})
     expected = [26, 2, 4, 25, 37, 61, 60, 36, 38, 63, 44, 41, 39, 43, 21, 34, 23, 24, 22, 52, 54, 55,
                 53, 67, 47, 65, 18, 5, 13, 59, 57, 58, 62, 27, 45, 40, 42, 7, 11, 12, 20, 33, 9, 10,
                 31, 35, 28, 69, 29, 16, 15, 17, 19, 8, 14, 3, 6, 6, 1, 32, 30, 56, 50, 49, 51, 70,
@@ -118,14 +118,14 @@ def test_vor(source_geoms, target_geoms, obstacle_geoms):
 
 
 def test_calc_segmentation_dist(source_geoms, target_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, True)
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": True})
     actual = engine._calc_segmentation_dist()
     expected = 1.147746358922793
     assert actual == expected
 
 
 def test_get_feature_from_coord_index(source_geoms, target_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, False)
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": False})
     actual = dumps(engine.get_feature_from_coord_index(26).geometry)
     expected = "LINESTRING (27.0000000000000000 1.0000000000000000, 30.0000000000000000 1.0000000000000000)"
     assert actual == expected
@@ -152,7 +152,7 @@ def test_tag_features():
     target_geoms_1 = [loads("POLYGON((2 0, 3 0, 3 1, 2 1, 2 0))")]
     obstacle_geoms_1 = [loads("POLYGON((4 0, 5 0, 5 1, 4 1, 4 0))")]
 
-    engine = AdjacencyEngine(source_geoms_1, target_geoms_1, obstacle_geoms_1, False)
+    engine = AdjacencyEngine(source_geoms_1, target_geoms_1, obstacle_geoms_1, **{"densify_features": False})
     engine._tag_feature_with_voronoi_vertices()
 
     assert engine.source_features[0].voronoi_points == {1, 2}
@@ -160,7 +160,7 @@ def test_tag_features():
 
 
 def test_immutable_properties(source_geoms, target_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, False)
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": False})
     with pytest.raises(ImmutablePropertyError):
         engine.source_features = [_Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
     with pytest.raises(ImmutablePropertyError):
@@ -176,7 +176,23 @@ def test_immutable_properties(source_geoms, target_geoms, obstacle_geoms):
 
 
 def test_add_new_attribute_error(source_geoms, target_geoms, obstacle_geoms):
-    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, False)
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": False})
     with pytest.raises(AttributeError):
         engine.new_attribute = 1
 
+
+def test_max_distance(source_geoms, target_geoms, obstacle_geoms):
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"max_distance": 1.0})
+    actual = engine.get_adjacency_dict()
+    expected = {0: [0], 1: [1], 3: [4, 5], 4: [6], 6: [7]}
+    assert actual == expected
+
+def test_bounding_rectangle(source_geoms, target_geoms, obstacle_geoms):
+    engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"bounding_box": (0, 0, 16, 2)})
+    actual = engine.get_adjacency_dict()
+    expected = {0: [0], 1: [1], 2: [2, 3], 3: [3, 4]}
+    assert actual == expected
+
+def test_invalid_bounding_rectangle(source_geoms, target_geoms, obstacle_geoms):
+    with pytest.raises(AssertionError):
+        engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"bounding_box": (0, -1, 0, -1)})
