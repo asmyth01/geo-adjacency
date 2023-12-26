@@ -32,6 +32,8 @@ shapely = "^2.0.2"
 numpy = "^1.26.2"
 matplotlib = "^3.8.1"
 setuptools = "^69.0.0"
+orjson = "^3.9.10"
+rtree = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"

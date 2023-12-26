@@ -242,6 +242,12 @@ class AdjacencyEngine:
         else:
             self._bounding_rectangle = None
 
+        # Check for invalid kwargs and log a warning
+        valid_kwargs = {"densify_features", "max_segment_length", "max_distance", "bounding_box"}
+        invalid_args = [key for key in kwargs if key not in valid_kwargs]
+        if len(invalid_args) > 0:
+            raise ValueError("Invalid keyword arguments: " + ", ".join(invalid_args))
+
         if max_segment_length and not densify_features:
             raise ValueError(
                 "interpolate_points must be True if interpolation_distance is not None"
