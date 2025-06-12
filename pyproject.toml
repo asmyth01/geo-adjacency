@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "geo-adjacency"
-version = "1.2.1"
+version = "1.2.2"
 description = "A package to determine which geometries are adjacent to each other, accounting for obstacles and gaps between features."
 authors = ["Andrew Smyth <andrew.j.smyth.89@gmail.com>"]
 readme = "README.md"
@@ -27,11 +27,11 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "<3.13,>=3.9"
-scipy = "^1.11.3"
-shapely = "^2.0.2"
-numpy = "^1.26.2"
-matplotlib = "^3.8.1"
-setuptools = "^69.0.0"
+scipy = ">=1.11.3"
+shapely = ">=2.0.2"
+numpy = ">=1.26.2"
+matplotlib = ">=3.8.1"
+setuptools = ">=69.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
