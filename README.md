@@ -56,3 +56,15 @@ _See the [docs](https://asmyth01.github.io/geo-adjacency/index.html) for details
           target_geoms = [target_geometries[i] for i in target_i_list]
 ```
 
+# Development
+## Installing dependencies
+```
+poetry env use [python version]
+poetry install
+```
+
+## Running tests
+`poetry run pytest tests`
+
+## Running a module
+`poetry run python [python file]`
