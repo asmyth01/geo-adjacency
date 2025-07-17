@@ -32,6 +32,7 @@ shapely = ">=2.0.2"
 numpy = ">=1.26.2"
 matplotlib = ">=3.8.1"
 setuptools = ">=69.0.0"
+rtree = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

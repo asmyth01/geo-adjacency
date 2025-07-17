@@ -15,6 +15,7 @@ which geometries are adjacent to each other. See
 import math
 from collections import defaultdict
 from typing import List, Union, Dict, Tuple, Generator
+from functools import lru_cache
 
 try:
     from typing_extensions import Self  # Python < 3.11
@@ -29,6 +30,7 @@ from scipy.spatial import distance
 from scipy.spatial import Voronoi
 from shapely import LineString, Point, Polygon, MultiPolygon, box
 from shapely.geometry.base import BaseGeometry
+import rtree
 
 from geo_adjacency.exception import ImmutablePropertyError
 from geo_adjacency.utils import (
@@ -66,7 +68,7 @@ class _Feature:
     geometries are adjacent.
     """
 
-    __slots__ = ("_geometry", "_coords", "voronoi_points")
+    __slots__ = ("_geometry", "_coords", "voronoi_points", "_bounds", "_coord_count")
 
     def __init__(self, geometry: BaseGeometry):
         """
@@ -89,6 +91,8 @@ class _Feature:
         self._geometry: BaseGeometry = geometry
         self._coords: Union[List[Tuple[float, float]], None] = None
         self.voronoi_points: set = set()
+        self._bounds: Union[Tuple[float, float, float, float], None] = None
+        self._coord_count: Union[int, None] = None
 
     def __str__(self):
         return str(self.geometry)
@@ -140,6 +144,26 @@ class _Feature:
     def geometry(self, geometry):
         self._geometry = geometry
         self._coords = None
+        self._bounds = None
+        self._coord_count = None
+
+    @property
+    def bounds(self) -> Tuple[float, float, float, float]:
+        """
+        Cached bounds of the geometry.
+        """
+        if self._bounds is None:
+            self._bounds = self.geometry.bounds
+        return self._bounds
+
+    @property
+    def coord_count(self) -> int:
+        """
+        Cached count of coordinates in this feature.
+        """
+        if self._coord_count is None:
+            self._coord_count = len(self.coords)
+        return self._coord_count
 
     @property
     def coords(self) -> List[Tuple[float, float]]:
@@ -190,6 +214,12 @@ class AdjacencyEngine:
         "_all_coordinates",
         "_max_distance",
         "_bounding_rectangle",
+        "_use_spatial_index",
+        "_min_overlapping_voronoi_vertices",
+        "_coord_to_feature_cache",
+        "_distance_cache",
+        "_total_coord_count",
+        "_coord_offset_cache",
     )
 
     def __init__(
@@ -226,13 +256,18 @@ class AdjacencyEngine:
               This is useful for removing data from the edges from the final analysis, as these
               are often not accurate. This is particularly helpful when analyzing a large data set
               in a windowed fashion. Expected format is (minx, miny, maxx, maxy).
+            use_spatial_index (bool, optional): If True, use rtree spatial index to speed up 
+              adjacency calculations when max_distance is set. Requires rtree library. Default True.
+            min_overlapping_voronoi_vertices (int, optional): Minimum number of Voronoi vertices 
+              that must be shared between features to be considered adjacent. Default 2.
 
         """
 
         densify_features = kwargs.get("densify_features", False)
         max_segment_length = kwargs.get("max_segment_length", None)
         self._max_distance = kwargs.get("max_distance", None)
-
+        self._use_spatial_index = kwargs.get("use_spatial_index", True)
+        self._min_overlapping_voronoi_vertices = kwargs.get("min_overlapping_voronoi_vertices", 2)
         if kwargs.get("bounding_box", None):
             minx, miny, maxx, maxy = kwargs.get("bounding_box")
             assert (
@@ -264,6 +299,12 @@ class AdjacencyEngine:
         self._feature_indices: Union[Dict[int, int], None] = None
         self._vor = None
         self._all_coordinates = None
+        
+        # Performance optimization caches
+        self._coord_to_feature_cache: Union[Dict[int, _Feature], None] = None
+        self._distance_cache: Dict[Tuple[int, int], float] = {}
+        self._total_coord_count: Union[int, None] = None
+        self._coord_offset_cache: Union[Dict[int, int], None] = None
 
         """All source, target, and obstacle features in a single list. The order of this list must
         not be changed."""
@@ -309,11 +350,16 @@ class AdjacencyEngine:
         """
 
         if not self._all_coordinates:
-            self._all_coordinates = []
+            # Pre-calculate total size for more efficient memory allocation
+            if self._total_coord_count is None:
+                self._total_coord_count = sum(feature.coord_count for feature in self.all_features)
+            
+            # Use list comprehension for better performance
+            coords_list = []
             for feature in self.all_features:
-                self._all_coordinates.extend(feature.coords)
-
-            self._all_coordinates = tuple(self._all_coordinates)
+                coords_list.extend(feature.coords)
+            
+            self._all_coordinates = tuple(coords_list)
         return self._all_coordinates
 
     @all_coordinates.setter
@@ -402,15 +448,32 @@ class AdjacencyEngine:
         Returns:
             _Feature: A _Feature at the given index.
         """
-        if not self._feature_indices:
-            self._feature_indices = {}
-            c = -1
-            for f, feature in enumerate(self.all_features):
-                for _ in range(len(feature.coords)):
-                    c += 1
-                    self._feature_indices[c] = f
+        if self._coord_to_feature_cache is None:
+            # Build both coordinate-to-feature mapping and offset cache more efficiently
+            self._coord_to_feature_cache = {}
+            self._coord_offset_cache = {}
+            
+            coord_idx = 0
+            for feature_idx, feature in enumerate(self.all_features):
+                coord_count = feature.coord_count
+                self._coord_offset_cache[feature_idx] = coord_idx
+                
+                # Batch assign coordinates to features
+                for i in range(coord_count):
+                    self._coord_to_feature_cache[coord_idx + i] = feature
+                coord_idx += coord_count
 
-        return self.all_features[self._feature_indices[coord_index]]
+        return self._coord_to_feature_cache[coord_index]
+
+    def _get_cached_distance(self, source_feature: _Feature, target_feature: _Feature) -> float:
+        """
+        Get cached distance between two features to avoid repeated calculations.
+        """
+        # Use geometry object ids as cache keys for better performance
+        cache_key = (min(id(source_feature), id(target_feature)), max(id(source_feature), id(target_feature)))
+        if cache_key not in self._distance_cache:
+            self._distance_cache[cache_key] = source_feature.geometry.distance(target_feature.geometry)
+        return self._distance_cache[cache_key]
 
     @property
     def vor(self):
@@ -481,30 +544,63 @@ class AdjacencyEngine:
         Returns:
             None
         """
-        min_overlapping_voronoi_vertices = 2
-        for source_index, source_feature in enumerate(source_set):
-            if (
-                self._bounding_rectangle is not None
-                and not self._bounding_rectangle.intersects(source_feature.geometry)
-            ):
-                continue
+        
+        # Build an rtree for target features with optimized threshold
+        target_rtree = None
+        if self._use_spatial_index and self._max_distance is not None and len(target_set) > 3:
+            target_rtree = rtree.index.Index()
+            # Use cached bounds for better performance
             for target_index, target_feature in enumerate(target_set):
-                if source_feature != target_feature:
-                    if (
-                        self._max_distance is not None
-                        and source_feature.geometry.distance(target_feature.geometry)
-                        > self._max_distance
-                    ) or (
-                        self._bounding_rectangle is not None
-                        and not self._bounding_rectangle.intersects(
-                            target_feature.geometry
-                        )
-                    ):
+                target_rtree.insert(target_index, target_feature.bounds)
+
+        # Pre-filter sources by bounding rectangle if specified
+        if self._bounding_rectangle is not None:
+            valid_source_indices = [
+                i for i, feature in enumerate(source_set)
+                if self._bounding_rectangle.intersects(feature.geometry)
+            ]
+        else:
+            valid_source_indices = list(range(len(source_set)))
+
+        for source_index in valid_source_indices:
+            source_feature = source_set[source_index]
+
+            # Get candidate target indices using spatial index if available
+            if target_rtree is not None:
+                # Use cached bounds for faster bbox calculation
+                bounds = source_feature.bounds
+                source_bbox = (
+                    bounds[0] - self._max_distance,
+                    bounds[1] - self._max_distance,
+                    bounds[2] + self._max_distance,
+                    bounds[3] + self._max_distance,
+                )
+                candidate_indices = list(target_rtree.intersection(source_bbox))
+            else:
+                candidate_indices = list(range(len(target_set)))
+
+            # Batch process candidates for better performance
+            for target_index in candidate_indices:
+                target_feature = target_set[target_index]
+                
+                # Skip if same feature
+                if source_feature is target_feature:
+                    continue
+
+                if self._max_distance is not None:
+                    if source_feature.geometry.distance(target_feature.geometry) > self._max_distance:
                         continue
-                    if source_feature._is_adjacent(
-                        target_feature, min_overlapping_voronoi_vertices
-                    ):
-                        self._adjacency_dict[source_index].append(target_index)
+                    
+                # Bounding rectangle check for target
+                if (self._bounding_rectangle is not None
+                    and not self._bounding_rectangle.intersects(target_feature.geometry)):
+                    continue
+                    
+                # Finally check Voronoi adjacency
+                if source_feature._is_adjacent(
+                    target_feature, self._min_overlapping_voronoi_vertices
+                ):
+                    self._adjacency_dict[source_index].append(target_index)
 
     def get_adjacency_dict(self) -> Dict[int, List[int]]:
         """
@@ -515,7 +611,7 @@ class AdjacencyEngine:
         source features.
 
         Returns:
-            dict: A dictionary of indices. The keys are the indices of feature_geoms. The
+            dict (Dict[int, List[int]]): A dictionary of indices. The keys are the indices of feature_geoms. The
             values are the indices of any adjacent features.
 
         """
@@ -570,7 +666,7 @@ class AdjacencyEngine:
                                 f"Error creating link between '{target_poly}' and '{source_poly}'"
                             )
                 add_geometry_to_plot(links, "green")
-
+        # If no target specified, get adjacency between source and other source features.
         else:
             for source_i, source_2_is in self.get_adjacency_dict().items():
                 source_poly = self.source_features[source_i].geometry
