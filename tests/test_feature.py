@@ -26,31 +26,60 @@ def test_polygon_feature():
 
 
 def test_polygon_w_interior():
-    poylgon_w_interior = loads("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, "
-                               "30 20, 20 30))")
+    poylgon_w_interior = loads(
+        "POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, " "30 20, 20 30))"
+    )
     polygon_feature = geo_adjacency.adjacency.Feature(poylgon_w_interior)
-    expected = [(35.0, 10.0), (45.0, 45.0), (15.0, 40.0), (10.0, 20.0), (20.0, 30.0),
-                (35.0, 35.0), (30.0, 20.0)]
+    expected = [
+        (35.0, 10.0),
+        (45.0, 45.0),
+        (15.0, 40.0),
+        (10.0, 20.0),
+        (20.0, 30.0),
+        (35.0, 35.0),
+        (30.0, 20.0),
+    ]
     assert polygon_feature.coords == expected
 
 
 def test_multipolygon_feature():
-    multipolygon = loads("MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, "
-                         "5 10, 15 5)))")
-    expected = [(30.0, 20.0), (45.0, 40.0), (10.0, 40.0), (15.0, 5.0), (40.0, 10.0), (10.0, 20.0),
-                (5.0, 10.0)]
+    multipolygon = loads(
+        "MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, "
+        "5 10, 15 5)))"
+    )
+    expected = [
+        (30.0, 20.0),
+        (45.0, 40.0),
+        (10.0, 40.0),
+        (15.0, 5.0),
+        (40.0, 10.0),
+        (10.0, 20.0),
+        (5.0, 10.0),
+    ]
     multipolygon_feature = geo_adjacency.adjacency.Feature(multipolygon)
     assert multipolygon_feature.coords == expected
 
 
 def test_multipolygon_w_interior():
-    multipolygon_w_interior = loads("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, "
-                                    "10 30, 10 10, 30 5, 45 20, 20 35),(30 20, 20 15, 20 25, "
-                                    "30 20)))")
+    multipolygon_w_interior = loads(
+        "MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, "
+        "10 30, 10 10, 30 5, 45 20, 20 35),(30 20, 20 15, 20 25, "
+        "30 20)))"
+    )
     multipolygon_feature = geo_adjacency.adjacency.Feature(multipolygon_w_interior)
-    expected = [(40.0, 40.0), (20.0, 45.0), (45.0, 30.0), (20.0, 35.0), (10.0, 30.0),
-                (10.0, 10.0), (30.0, 5.0), (45.0, 20.0), (30.0, 20.0), (20.0, 15.0),
-                (20.0, 25.0)]
+    expected = [
+        (40.0, 40.0),
+        (20.0, 45.0),
+        (45.0, 30.0),
+        (20.0, 35.0),
+        (10.0, 30.0),
+        (10.0, 10.0),
+        (30.0, 5.0),
+        (45.0, 20.0),
+        (30.0, 20.0),
+        (20.0, 15.0),
+        (20.0, 25.0),
+    ]
     assert multipolygon_feature.coords == expected
 
 
@@ -67,7 +96,6 @@ def test_immutable_exception(point_feature_a):
 
 
 def test_change_feature_geometry(point_feature_a, point_feature_b):
-
     assert point_feature_a.coords == [(30.0, 10.0)]
     assert point_feature_b.coords == [(10.0, 10.0)]
 
@@ -95,6 +123,8 @@ def test_features_not_adjacent_empty_voronoi(point_feature_a, point_feature_b):
 
 
 def test_invalid_geometry_type():
-    geom = loads("GEOMETRYCOLLECTION (POINT (40 10), LINESTRING (10 10, 20 20, 10 40), POLYGON ((40 40, 20 45, 45 30, 40 40)))")
+    geom = loads(
+        "GEOMETRYCOLLECTION (POINT (40 10), LINESTRING (10 10, 20 20, 10 40), POLYGON ((40 40, 20 45, 45 30, 40 40)))"
+    )
     with pytest.raises(TypeError):
         Feature(geom)

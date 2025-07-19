@@ -1,39 +1,26 @@
-from geo_adjacency.exception import ImmutablePropertyError
-from geo_adjacency.utils import coords_from_multipolygon, coords_from_point, coords_from_polygon, coords_from_ring
-
-
 from shapely import LineString, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 
+from geo_adjacency.exception import ImmutablePropertyError
+from geo_adjacency.utils import (
+    coords_from_multipolygon,
+    coords_from_point,
+    coords_from_polygon,
+    coords_from_ring,
+)
 
 try:
     from typing_extensions import Self  # Python < 3.11
 except ImportError:
     from typing import Self  # Python >= 3.11
+
 import logging
-
-
 from typing import List, Tuple, Union
-import logging
 
-# Create a custom logger
-log: logging.Logger = logging.getLogger(__name__)
+from geo_adjacency.logging_config import setup_logger
 
-# Create handlers
-c_handler: logging.StreamHandler = logging.StreamHandler()
-c_handler.setLevel(logging.WARNING)
-
-# Create formatters and add it to handlers
-c_format: logging.Formatter = logging.Formatter(
-    "%(name)s - %(levelname)s - %(message)s"
-)
-f_format: logging.Formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-c_handler.setFormatter(c_format)
-
-# Add handlers to the logger
-log.addHandler(c_handler)
+# Create a custom logger using the centralized logging configuration
+log: logging.Logger = setup_logger(__name__)
 
 
 class Feature:

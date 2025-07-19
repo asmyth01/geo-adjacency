@@ -6,7 +6,7 @@ by end users.
 from typing import List, Tuple
 
 from matplotlib import pyplot as plt
-from shapely import Point, LineString, Polygon, MultiPolygon
+from shapely import LineString, MultiPolygon, Point, Polygon
 
 
 def coords_from_point(point: Point) -> List[Tuple[float, float]]:
