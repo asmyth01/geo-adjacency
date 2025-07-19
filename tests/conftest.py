@@ -5,7 +5,7 @@ without explicit importing.
 
 import pytest
 from shapely.wkt import loads
-from geo_adjacency.adjacency import _Feature
+from geo_adjacency.feature import Feature
 
 # A list of rectangular polygon WKTs with a small space between each. Order is clockwise
 source_wkts = [
@@ -64,8 +64,8 @@ def point_geom_b():
 
 @pytest.fixture
 def point_feature_a(point_geom_a):
-    return _Feature(point_geom_a)
+    return Feature(point_geom_a)
 
 @pytest.fixture
 def point_feature_b(point_geom_b):
-    return _Feature(point_geom_b)
+    return Feature(point_geom_b)

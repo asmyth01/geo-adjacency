@@ -1,8 +1,9 @@
 import pytest
 from shapely.wkt import dumps, loads
 
+from geo_adjacency.feature import Feature
 import geo_adjacency.adjacency
-from geo_adjacency.adjacency import AdjacencyEngine, _Feature
+from geo_adjacency.adjacency import AdjacencyEngine
 import geo_adjacency.utils
 from geo_adjacency.exception import ImmutablePropertyError
 
@@ -29,11 +30,11 @@ def test_all_features(source_geoms, target_geoms, obstacle_geoms):
     engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms)
     expected = []
     for geom in source_geoms:
-        expected.append(geo_adjacency.adjacency._Feature(geom))
+        expected.append(geo_adjacency.adjacency.Feature(geom))
     for geom in target_geoms:
-        expected.append(geo_adjacency.adjacency._Feature(geom))
+        expected.append(geo_adjacency.adjacency.Feature(geom))
     for geom in obstacle_geoms:
-        expected.append(geo_adjacency.adjacency._Feature(geom))
+        expected.append(geo_adjacency.adjacency.Feature(geom))
 
     for feat_expected, feat_actual in zip(expected, engine.all_features):
         assert feat_expected.geometry == feat_actual.geometry, "{} != {}".format(feat_expected, feat_actual)
@@ -162,11 +163,11 @@ def test_tag_features():
 def test_immutable_properties(source_geoms, target_geoms, obstacle_geoms):
     engine = AdjacencyEngine(source_geoms, target_geoms, obstacle_geoms, **{"densify_features": False})
     with pytest.raises(ImmutablePropertyError):
-        engine.source_features = [_Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
+        engine.source_features = [Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
     with pytest.raises(ImmutablePropertyError):
-        engine.target_features = [_Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
+        engine.target_features = [Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
     with pytest.raises(ImmutablePropertyError):
-        engine.obstacle_features = [_Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
+        engine.obstacle_features = [Feature(loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))]
     with pytest.raises(ImmutablePropertyError):
         engine.vor = 1
     with pytest.raises(ImmutablePropertyError):

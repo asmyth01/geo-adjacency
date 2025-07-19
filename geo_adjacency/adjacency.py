@@ -15,33 +15,25 @@ which geometries are adjacent to each other. See
 import math
 from collections import defaultdict
 from typing import List, Union, Dict, Tuple, Generator
-from functools import lru_cache
 
-try:
-    from typing_extensions import Self  # Python < 3.11
-except ImportError:
-    from typing import Self  # Python >= 3.11
-import logging
+from geo_adjacency.feature import Feature
+
 
 import matplotlib.pyplot as plt
 import numpy as np
 import shapely.ops
 from scipy.spatial import distance
 from scipy.spatial import Voronoi
-from shapely import LineString, Point, Polygon, MultiPolygon, box
+from shapely import LineString, Point, Polygon, box, MultiPoint
 from shapely.geometry.base import BaseGeometry
 import rtree
 
 from geo_adjacency.exception import ImmutablePropertyError
 from geo_adjacency.utils import (
     add_geometry_to_plot,
-    coords_from_point,
-    coords_from_ring,
-    coords_from_polygon,
-    coords_from_multipolygon,
 )
+import logging
 
-# ToDo: Support geometries with Z-coordinates
 # Create a custom logger
 log: logging.Logger = logging.getLogger(__name__)
 
@@ -60,137 +52,6 @@ c_handler.setFormatter(c_format)
 
 # Add handlers to the logger
 log.addHandler(c_handler)
-
-
-class _Feature:
-    """
-    A _Feature is a wrapper around a Shapely geometry that allows us to easily determine if two
-    geometries are adjacent.
-    """
-
-    __slots__ = ("_geometry", "_coords", "voronoi_points", "_bounds", "_coord_count")
-
-    def __init__(self, geometry: BaseGeometry):
-        """
-        Create a _Feature from a Shapely geometry.
-
-        Args:
-            geometry (BaseGeometry): A valid Shapely Geometry, either a Point, LineString, Polygon, or
-        MultiPolygon.
-        """
-
-        if not isinstance(geometry, (Point, Polygon, MultiPolygon, LineString)):
-            raise TypeError(
-                "Cannot create _Feature for geometry type '%s'." % type(geometry)
-            )
-
-        assert geometry.is_valid, (
-            "Could not process invalid geometry: %s" % geometry.wkt
-        )
-
-        self._geometry: BaseGeometry = geometry
-        self._coords: Union[List[Tuple[float, float]], None] = None
-        self.voronoi_points: set = set()
-        self._bounds: Union[Tuple[float, float, float, float], None] = None
-        self._coord_count: Union[int, None] = None
-
-    def __str__(self):
-        return str(self.geometry)
-
-    def __repr__(self):
-        return f"<_Feature: {str(self.geometry)}>"
-
-    def _is_adjacent(
-        self, other: Self, min_overlapping_voronoi_vertices: int = 2
-    ) -> bool:
-        """
-        Determine if two features are adjacent based on how many Voronoi vertices they share. Note:
-        the Voronoi analysis must have been run, or this will always return False.
-        Args:
-            other (_Feature): Another _Feature to compare to.
-            min_overlapping_voronoi_vertices (int): The minimum number of Voronoi vertices that
-                must be shared to be considered adjacent.
-
-        Returns:
-            bool: True if the two features are adjacent.
-
-        """
-        assert isinstance(other, type(self)), "Cannot compare '%s' with '%s'." % (
-            type(self),
-            type(other),
-        )
-        if len(self.voronoi_points) == 0 and len(other.voronoi_points) == 0:
-            log.warning(
-                "No Voronoi vertices found for either feature. Did you run the analysis yet?"
-            )
-            return False
-        return (
-            len(self.voronoi_points & other.voronoi_points)
-            >= min_overlapping_voronoi_vertices
-        )
-
-    @property
-    def geometry(self):
-        """
-        Access the Shapely geometry of the feature.
-
-        Returns:
-            BaseGeometry: The Shapely geometry of the feature.
-
-        """
-        return self._geometry
-
-    @geometry.setter
-    def geometry(self, geometry):
-        self._geometry = geometry
-        self._coords = None
-        self._bounds = None
-        self._coord_count = None
-
-    @property
-    def bounds(self) -> Tuple[float, float, float, float]:
-        """
-        Cached bounds of the geometry.
-        """
-        if self._bounds is None:
-            self._bounds = self.geometry.bounds
-        return self._bounds
-
-    @property
-    def coord_count(self) -> int:
-        """
-        Cached count of coordinates in this feature.
-        """
-        if self._coord_count is None:
-            self._coord_count = len(self.coords)
-        return self._coord_count
-
-    @property
-    def coords(self) -> List[Tuple[float, float]]:
-        """
-        Convenience property for accessing the coordinates of the geometry as a list of 2-tuples.
-
-        Returns:
-            List[Tuple[float, float]]: A list of coordinate tuples.
-
-        """
-
-        if not self._coords:
-            if isinstance(self.geometry, Point):
-                self._coords = coords_from_point(self.geometry)
-            elif isinstance(self.geometry, LineString):
-                self._coords = coords_from_ring(self.geometry)
-            elif isinstance(self.geometry, Polygon):
-                self._coords = coords_from_polygon(self.geometry)
-            elif isinstance(self.geometry, MultiPolygon):
-                self._coords = coords_from_multipolygon(self.geometry)
-            else:
-                raise TypeError(f"Unknown geometry type '{type(self.geometry)}'")
-        return self._coords
-
-    @coords.setter
-    def coords(self, coords):
-        raise ImmutablePropertyError("Property coords is immutable.")
 
 
 class AdjacencyEngine:
@@ -217,7 +78,6 @@ class AdjacencyEngine:
         "_use_spatial_index",
         "_min_overlapping_voronoi_vertices",
         "_coord_to_feature_cache",
-        "_distance_cache",
         "_total_coord_count",
         "_coord_offset_cache",
     )
@@ -282,16 +142,16 @@ class AdjacencyEngine:
                 "interpolate_points must be True if interpolation_distance is not None"
             )
 
-        self._source_features: Tuple[_Feature] = tuple(
-            [_Feature(geom) for geom in source_geoms]
+        self._source_features: Tuple[Feature] = tuple(
+            [Feature(geom) for geom in source_geoms]
         )
-        self._target_features: Tuple[_Feature] = (
-            tuple([_Feature(geom) for geom in target_geoms])
+        self._target_features: Tuple[Feature] = (
+            tuple([Feature(geom) for geom in target_geoms])
             if target_geoms
             else tuple()
         )
-        self._obstacle_features: Union[Tuple[_Feature], None] = (
-            tuple([_Feature(geom) for geom in obstacle_geoms])
+        self._obstacle_features: Union[Tuple[Feature], None] = (
+            tuple([Feature(geom) for geom in obstacle_geoms])
             if obstacle_geoms
             else tuple()
         )
@@ -301,14 +161,13 @@ class AdjacencyEngine:
         self._all_coordinates = None
         
         # Performance optimization caches
-        self._coord_to_feature_cache: Union[Dict[int, _Feature], None] = None
-        self._distance_cache: Dict[Tuple[int, int], float] = {}
+        self._coord_to_feature_cache: Union[Dict[int, Feature], None] = None
         self._total_coord_count: Union[int, None] = None
         self._coord_offset_cache: Union[Dict[int, int], None] = None
 
         """All source, target, and obstacle features in a single list. The order of this list must
         not be changed."""
-        self._all_features: Tuple[_Feature, ...] = tuple(
+        self._all_features: Tuple[Feature, ...] = tuple(
             [*self.source_features, *self.target_features, *self.obstacle_features]
         )
 
@@ -318,7 +177,7 @@ class AdjacencyEngine:
                 log.info("Calculated max_segment_length of %s" % max_segment_length)
 
             for feature in self.all_features:
-                if not isinstance(feature.geometry, Point):
+                if not isinstance(feature.geometry, Point) and not isinstance(feature.geometry, MultiPoint):
                     feature.geometry = feature.geometry.segmentize(max_segment_length)
             # Reset all coordinates
             self._all_coordinates = None
@@ -393,7 +252,7 @@ class AdjacencyEngine:
         )
 
     @property
-    def source_features(self) -> Tuple[_Feature]:
+    def source_features(self) -> Tuple[Feature]:
         """
         Features which will be the keys in the adjacency_dict.
 
@@ -408,7 +267,7 @@ class AdjacencyEngine:
         raise ImmutablePropertyError("Property source_features is immutable.")
 
     @property
-    def target_features(self) -> Tuple[_Feature]:
+    def target_features(self) -> Tuple[Feature]:
         """
         Features which will be the values in the adjacency_dict.
         Returns:
@@ -421,7 +280,7 @@ class AdjacencyEngine:
         raise ImmutablePropertyError("Property target_features is immutable.")
 
     @property
-    def obstacle_features(self) -> Tuple[_Feature]:
+    def obstacle_features(self) -> Tuple[Feature]:
         """
         Features which can prevent source and target features from being adjacent. They
         Do not participate in the adjacency_dict.
@@ -435,12 +294,9 @@ class AdjacencyEngine:
     def obstacle_features(self, _):
         raise ImmutablePropertyError("Property obstacle_features is immutable.")
 
-    def get_feature_from_coord_index(self, coord_index: int) -> _Feature:
+    def get_feature_from_coord_index(self, coord_index: int) -> Feature:
         """
-        A list which is the length of self._all_coordinates. For each coordinate, we add the
-        index of the corresponding feature from the list self.all_features. This is used to
-        determine which coordinate belongs to which feature after we calculate the voronoi
-        diagram.
+        Given any coordinate in self._all_coordinates, return the feature that it belongs to.
 
         Args:
             coord_index (int): The index of the coordinate in self._all_coordinates
@@ -464,16 +320,6 @@ class AdjacencyEngine:
                 coord_idx += coord_count
 
         return self._coord_to_feature_cache[coord_index]
-
-    def _get_cached_distance(self, source_feature: _Feature, target_feature: _Feature) -> float:
-        """
-        Get cached distance between two features to avoid repeated calculations.
-        """
-        # Use geometry object ids as cache keys for better performance
-        cache_key = (min(id(source_feature), id(target_feature)), max(id(source_feature), id(target_feature)))
-        if cache_key not in self._distance_cache:
-            self._distance_cache[cache_key] = source_feature.geometry.distance(target_feature.geometry)
-        return self._distance_cache[cache_key]
 
     @property
     def vor(self):
@@ -533,7 +379,7 @@ class AdjacencyEngine:
                 feature.voronoi_points.add(i)
 
     def _determine_adjacency(
-        self, source_set: Tuple[_Feature], target_set: Tuple[_Feature]
+        self, source_set: Tuple[Feature], target_set: Tuple[Feature]
     ):
         """
         Determines the adjacency relationship between two sets of features.
