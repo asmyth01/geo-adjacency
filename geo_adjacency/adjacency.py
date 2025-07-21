@@ -9,28 +9,25 @@ pass in a set of Point geometries to the trees, a Polygon to represent the lake,
 a road passing between some of the trees and the shore.
 
 `AdjacencyEngine` utilizes a Voronoi diagram of all the vertices in all the geometries combined to determine
-which geometries are adjacent to each other. See
+which geometries are adjacent to each other. The methodology is described in detail in the project documentation.
 """
 
 import logging
-import math
-from collections import defaultdict
 from typing import Dict, Generator, List, Tuple, Union
+from collections import defaultdict
 
-import matplotlib.pyplot as plt
+import geopandas as gpd
 import numpy as np
-import rtree
-import shapely.ops
-from scipy.spatial import Voronoi, distance
+import pandas as pd
+from matplotlib import pyplot as plt
+from scipy.spatial import Voronoi
 from shapely import LineString, MultiPoint, Point, Polygon, box
+from shapely import ops as shapely_ops
 from shapely.geometry.base import BaseGeometry
 
 from geo_adjacency.exception import ImmutablePropertyError
-from geo_adjacency.feature import Feature
 from geo_adjacency.logging_config import setup_logger
-from geo_adjacency.utils import (
-    add_geometry_to_plot,
-)
+from geo_adjacency.utils import count_unique_coords, add_geometry_to_plot
 
 # Create a custom logger using the centralized logging configuration
 log: logging.Logger = setup_logger(__name__)
@@ -39,50 +36,52 @@ log: logging.Logger = setup_logger(__name__)
 class AdjacencyEngine:
     """
     A class for calculating the adjacency of a set of geometries to another geometry or set
-    of geometries, given a set of obstacles, within a given radius.
+    of geometries, given a set of obstacles. Optionally supports distance constraints and 
+    bounding box filtering.
 
-    First, the Voronoi diagram is generated for each geometry and obstacle. Then, we check which
-    voronoi shapes intersect one another. If they do, then the two underlying geometries are
-    adjacent.
+    First, the Voronoi diagram is generated for all geometry vertices including obstacles. 
+    Then, we check which Voronoi regions share vertices. If they share enough vertices 
+    (configurable threshold), then the underlying geometries are considered adjacent.
     """
 
     __slots__ = (
-        "_source_features",
-        "_target_features",
-        "_obstacle_features",
+        "_source_gdf",
+        "_target_gdf",
+        "_obstacle_gdf",
         "_adjacency_dict",
-        "_feature_indices",
         "_vor",
-        "_all_features",
-        "_all_coordinates",
+        "_all_features_gdf",
         "_max_distance",
         "_bounding_rectangle",
-        "_use_spatial_index",
         "_min_overlapping_voronoi_vertices",
         "_coord_to_feature_cache",
-        "_total_coord_count",
-        "_coord_offset_cache",
+        "_geometry_voronoi_vertices",
     )
 
     def __init__(
         self,
-        source_geoms: List[BaseGeometry],
-        target_geoms: Union[List[BaseGeometry], None] = None,
-        obstacle_geoms: Union[List[BaseGeometry], None] = None,
+        source_geoms: Union[List[BaseGeometry], gpd.GeoDataFrame],
+        target_geoms: Union[List[BaseGeometry], gpd.GeoDataFrame, None] = None,
+        obstacle_geoms: Union[List[BaseGeometry], gpd.GeoDataFrame, None] = None,
         **kwargs,
     ):
         """
-         Note: only Multipolygons, Polygons, LineStrings and Points are supported. It is assumed all
+        Note: only Multipolygons, Polygons, LineStrings and Points are supported. It is assumed all
         features are in the same projection.
 
         Args:
-            source_geoms (List[BaseGeometry]): List of Shapely geometries. We will which ones are adjacent to
-        which others, unless target_geoms is specified.
-            target_geoms (Union[List[BaseGeometry], None]), optional): list of Shapley geometries. if not None, We will
-        test if these features are adjacent to the source features.
-            obstacle_geoms (Union[List[BaseGeometry], None]), optional): List
-        of Shapely geometries. These features will not be tested for adjacency, but they can
-        prevent a source and target feature from being adjacent.
+            source_geoms (Union[List[BaseGeometry], gpd.GeoDataFrame]): List of Shapely geometries
+                or a GeoPandas GeoDataFrame. We will determine which ones are adjacent to which others,
+                unless target_geoms is specified. If a list is provided, it will be converted to a
+                GeoDataFrame internally for vectorized operations.
+            target_geoms (Union[List[BaseGeometry], gpd.GeoDataFrame, None], optional): List of
+                Shapely geometries or a GeoPandas GeoDataFrame. If not None, we will test if these
+                features are adjacent to the source features. If a list is provided, it will be
+                converted to a GeoDataFrame internally.
+            obstacle_geoms (Union[List[BaseGeometry], gpd.GeoDataFrame, None], optional): List
+                of Shapely geometries or a GeoPandas GeoDataFrame. These features will not be tested
+                for adjacency, but they can prevent a source and target feature from being adjacent.
+                If a list is provided, it will be converted to a GeoDataFrame internally.
 
         Keyword Args:
             densify_features (bool, optional):  If True, we will add additional points to the
@@ -90,7 +89,7 @@ class AdjacencyEngine:
               max_segment_length is false, then the max_segment_length will be calculated based on
               the average segment length of all features, divided by 5.
             max_segment_length (Union[float, None], optional): The maximum distance between vertices
-              that we want iIn projection units. densify_features must be True, or an error will be thrown.
+              that we want in projection units. densify_features must be True, or an error will be thrown.
             max_distance (Union[float, None], optional): The maximum distance between two features
               for them to be candidates for adjacency. Units are same as geometry coordinate system.
             bounding_box (Union[float, float, float, float, None], optional): Set a bounding box
@@ -98,8 +97,6 @@ class AdjacencyEngine:
               This is useful for removing data from the edges from the final analysis, as these
               are often not accurate. This is particularly helpful when analyzing a large data set
               in a windowed fashion. Expected format is (minx, miny, maxx, maxy).
-            use_spatial_index (bool, optional): If True, use rtree spatial index to speed up
-              adjacency calculations when max_distance is set. Requires rtree library. Default True.
             min_overlapping_voronoi_vertices (int, optional): Minimum number of Voronoi vertices
               that must be shared between features to be considered adjacent. Default 2.
 
@@ -108,7 +105,6 @@ class AdjacencyEngine:
         densify_features = kwargs.get("densify_features", False)
         max_segment_length = kwargs.get("max_segment_length", None)
         self._max_distance = kwargs.get("max_distance", None)
-        self._use_spatial_index = kwargs.get("use_spatial_index", True)
         self._min_overlapping_voronoi_vertices = kwargs.get(
             "min_overlapping_voronoi_vertices", 2
         )
@@ -123,93 +119,120 @@ class AdjacencyEngine:
 
         if max_segment_length and not densify_features:
             raise ValueError(
-                "interpolate_points must be True if interpolation_distance is not None"
+                "densify_features must be True if max_segment_length is not None"
             )
 
-        self._source_features: Tuple[Feature] = tuple(
-            [Feature(geom) for geom in source_geoms]
+        # Convert inputs to GeoDataFrames for vectorized operations
+        self._source_gdf = self._to_geodataframe(source_geoms)
+        self._target_gdf = (
+            self._to_geodataframe(target_geoms) if target_geoms is not None else None
         )
-        self._target_features: Tuple[Feature] = (
-            tuple([Feature(geom) for geom in target_geoms]) if target_geoms else tuple()
+        self._obstacle_gdf = (
+            self._to_geodataframe(obstacle_geoms)
+            if obstacle_geoms is not None
+            else None
         )
-        self._obstacle_features: Union[Tuple[Feature], None] = (
-            tuple([Feature(geom) for geom in obstacle_geoms])
-            if obstacle_geoms
-            else tuple()
-        )
+
         self._adjacency_dict: Union[Dict[int, List[int]], None] = None
-        self._feature_indices: Union[Dict[int, int], None] = None
         self._vor = None
-        self._all_coordinates = None
-
-        # Performance optimization caches
-        self._coord_to_feature_cache: Union[Dict[int, Feature], None] = None
-        self._total_coord_count: Union[int, None] = None
-        self._coord_offset_cache: Union[Dict[int, int], None] = None
-
-        """All source, target, and obstacle features in a single list. The order of this list must
-        not be changed."""
-        self._all_features: Tuple[Feature, ...] = tuple(
-            [*self.source_features, *self.target_features, *self.obstacle_features]
-        )
+        self._all_features_gdf = None
+        self._geometry_voronoi_vertices = None
+        self._coord_to_feature_cache: Union[Dict[int, Tuple[str, int]], None] = None
 
         if densify_features:
             if max_segment_length is None:
                 max_segment_length = self._calc_segmentation_dist()
                 log.info("Calculated max_segment_length of %s" % max_segment_length)
 
-            for feature in self.all_features:
-                if not isinstance(feature.geometry, Point) and not isinstance(
-                    feature.geometry, MultiPoint
-                ):
-                    feature.geometry = feature.geometry.segmentize(max_segment_length)
-            # Reset all coordinates
-            self._all_coordinates = None
+            # Apply segmentation to all GeoDataFrames
+            for gdf in [self.source_gdf, self.target_gdf, self.obstacle_gdf]:
+                if gdf is not None:
+                    # Apply segmentation to non-point geometries
+                    mask = ~gdf.geometry.apply(
+                        lambda geom: isinstance(geom, (Point, MultiPoint))
+                    )
+                    if mask.any():
+                        gdf.loc[mask, "geometry"] = gdf.loc[mask, "geometry"].apply(
+                            lambda geom: geom.segmentize(max_segment_length)
+                        )
+            # Reset all features cache
+            self._all_features_gdf = None
 
-    @property
-    def all_features(self):
+    def _to_geodataframe(
+        self, geoms_input: Union[List[BaseGeometry], gpd.GeoDataFrame]
+    ) -> gpd.GeoDataFrame:
         """
-        All source, target, and obstacle features in a single list. The order of this list must
-        not be changed. This property cannot be set manually.
+        Convert input geometries to a GeoDataFrame for vectorized operations.
+
+        Args:
+            geoms_input: Either a list of geometries or an existing GeoDataFrame
 
         Returns:
-            List[_Feature]: A list of _Features.
-
+            gpd.GeoDataFrame: A GeoDataFrame with geometries and optional attributes
         """
-        return self._all_features
+        return (
+            geoms_input
+            if isinstance(geoms_input, gpd.GeoDataFrame)
+            else gpd.GeoDataFrame(geometry=geoms_input)
+        )
 
-    @all_features.setter
-    def all_features(self, value):
+    @property
+    def source_gdf(self) -> gpd.GeoDataFrame:
+        """Access the source geometries as a GeoDataFrame."""
+        return self._source_gdf
+
+    @property
+    def target_gdf(self) -> Union[gpd.GeoDataFrame, None]:
+        """Access the target geometries as a GeoDataFrame."""
+        return self._target_gdf
+
+    @property
+    def obstacle_gdf(self) -> Union[gpd.GeoDataFrame, None]:
+        """Access the obstacle geometries as a GeoDataFrame."""
+        return self._obstacle_gdf
+
+    @property
+    def all_features_gdf(self) -> gpd.GeoDataFrame:
+        """
+        All source, target, and obstacle features concatenated into a single GeoDataFrame.
+        The order is preserved: source, then target, then obstacles.
+
+        Returns:
+            gpd.GeoDataFrame: Combined GeoDataFrame with all geometries and a 'feature_type' column.
+        """
+
+        if self._all_features_gdf is None:
+            # Concatenate all GeoDataFrames while preserving order
+            gdfs_to_concat = []
+
+            if self.source_gdf is not None and len(self.source_gdf) > 0:
+                source_copy = self.source_gdf.copy()
+                source_copy["feature_type"] = "source"
+                source_copy["original_index"] = range(len(source_copy))
+                gdfs_to_concat.append(source_copy)
+
+            if self.target_gdf is not None and len(self.target_gdf) > 0:
+                target_copy = self.target_gdf.copy()
+                target_copy["feature_type"] = "target"
+                target_copy["original_index"] = range(len(target_copy))
+                gdfs_to_concat.append(target_copy)
+
+            if self.obstacle_gdf is not None and len(self.obstacle_gdf) > 0:
+                obstacle_copy = self.obstacle_gdf.copy()
+                obstacle_copy["feature_type"] = "obstacle"
+                obstacle_copy["original_index"] = range(len(obstacle_copy))
+                gdfs_to_concat.append(obstacle_copy)
+
+            if gdfs_to_concat:
+                self._all_features_gdf = pd.concat(gdfs_to_concat, ignore_index=True)
+            else:
+                self._all_features_gdf = gpd.GeoDataFrame()
+
+        return self._all_features_gdf
+
+    @all_features_gdf.setter
+    def all_features_gdf(self, value):
         raise ImmutablePropertyError("Property all_features is immutable.")
-
-    @property
-    def all_coordinates(self):
-        """
-        All source, target, and obstacle coordinates in a single list. The order of this list must
-        not be changed. This property cannot be set manually.
-
-        Returns:
-            List[tuple[float, float]]: A list of coordinate tuples.
-        """
-
-        if not self._all_coordinates:
-            # Pre-calculate total size for more efficient memory allocation
-            if self._total_coord_count is None:
-                self._total_coord_count = sum(
-                    feature.coord_count for feature in self.all_features
-                )
-
-            # Use list comprehension for better performance
-            coords_list = []
-            for feature in self.all_features:
-                coords_list.extend(feature.coords)
-
-            self._all_coordinates = tuple(coords_list)
-        return self._all_coordinates
-
-    @all_coordinates.setter
-    def all_coordinates(self, value):
-        raise ImmutablePropertyError("Property all_coordinates is immutable.")
 
     def _calc_segmentation_dist(self, divisor=5):
         """
@@ -230,94 +253,75 @@ class AdjacencyEngine:
         """
 
         return float(
-            (
-                sum(distance.pdist(self.all_coordinates, "euclidean"))
-                / math.pow(len(self.all_coordinates), 2)
-            )
+            sum(self.all_features_gdf.geometry.length)
+            / self.all_features_gdf.apply(
+                lambda row: count_unique_coords(row.geometry), axis=1
+            ).sum()
             / divisor
         )
 
-    @property
-    def source_features(self) -> Tuple[Feature]:
+    def get_geometry_from_coord_index(self, coord_index: int) -> Tuple[str, int]:
         """
-        Features which will be the keys in the adjacency_dict.
+        Map a coordinate index back to its source geometry.
 
-        Returns:
-            List[_Feature]: A list of _Features.
-
-        """
-        return self._source_features
-
-    @source_features.setter
-    def source_features(self, features: Tuple[BaseGeometry]):
-        raise ImmutablePropertyError("Property source_features is immutable.")
-
-    @property
-    def target_features(self) -> Tuple[Feature]:
-        """
-        Features which will be the values in the adjacency_dict.
-        Returns:
-            List[_Feature]: A list of _Features.
-        """
-        return self._target_features
-
-    @target_features.setter
-    def target_features(self, _):
-        raise ImmutablePropertyError("Property target_features is immutable.")
-
-    @property
-    def obstacle_features(self) -> Tuple[Feature]:
-        """
-        Features which can prevent source and target features from being adjacent. They
-        Do not participate in the adjacency_dict.
-
-        Returns:
-            List[_Feature]: A list of _Features.
-        """
-        return self._obstacle_features
-
-    @obstacle_features.setter
-    def obstacle_features(self, _):
-        raise ImmutablePropertyError("Property obstacle_features is immutable.")
-
-    def get_feature_from_coord_index(self, coord_index: int) -> Feature:
-        """
-        Given any coordinate in self._all_coordinates, return the feature that it belongs to.
+        Given a coordinate index from the flattened coordinate list used for Voronoi 
+        analysis, determine which geometry the coordinate belongs to.
 
         Args:
-            coord_index (int): The index of the coordinate in self._all_coordinates
+            coord_index (int): The index of the coordinate in the flattened coordinate list.
 
         Returns:
-            _Feature: A _Feature at the given index.
+            Tuple[str, int]: A tuple of (feature_type, geometry_index) where:
+                - feature_type is 'source', 'target', or 'obstacle'
+                - geometry_index is the index within that feature type's GeoDataFrame
+
+        Raises:
+            KeyError: If the coordinate index is not found in the cache.
         """
         if self._coord_to_feature_cache is None:
-            # Build both coordinate-to-feature mapping and offset cache more efficiently
-            self._coord_to_feature_cache = {}
-            self._coord_offset_cache = {}
+            all_features_gdf = self.all_features_gdf
 
-            coord_idx = 0
-            for feature_idx, feature in enumerate(self.all_features):
-                coord_count = feature.coord_count
-                self._coord_offset_cache[feature_idx] = coord_idx
+            if len(all_features_gdf) == 0:
+                self._coord_to_feature_cache = {}
+            else:
+                # Build coordinate counts by actually extracting coordinates (matches Voronoi exactly)
+                all_coords = all_features_gdf.geometry.get_coordinates()
+                coord_counts = all_coords.groupby(all_coords.index).size().tolist()
 
-                # Batch assign coordinates to features
-                for i in range(coord_count):
-                    self._coord_to_feature_cache[coord_idx + i] = feature
-                coord_idx += coord_count
+                                # Build the cache using fully vectorized operations
+                # Create arrays for all coordinate indices and their corresponding geometry info
+                coord_indices = np.arange(len(all_coords))
+                geom_indices = all_coords.index.values
+                
+                # Extract feature info as arrays for vectorized lookup
+                feature_types = all_features_gdf["feature_type"].values[geom_indices]
+                original_indices = all_features_gdf["original_index"].values[geom_indices]
+                
+                # Build cache with dictionary comprehension, ensuring Python int types
+                self._coord_to_feature_cache = {
+                    int(coord_idx): (feature_type, int(orig_idx))
+                    for coord_idx, feature_type, orig_idx in zip(
+                        coord_indices, feature_types, original_indices
+                    )
+                }
 
         return self._coord_to_feature_cache[coord_index]
 
     @property
-    def vor(self):
+    def vor(self) -> Voronoi:
         """
-        The Voronoi diagram object returned by Scipy. Useful primarily for debugging an
-        adjacency analysis.
+        The Voronoi diagram used for adjacency analysis.
+        
+        Lazily computed Voronoi diagram from all geometry coordinates. This property
+        provides access to the underlying Scipy Voronoi object, which is useful 
+        for debugging, visualization, or advanced analysis.
 
         Returns:
-            scipy.spatial.Voronoi: The Scipy Voronoi object.
+            scipy.spatial.Voronoi: The Voronoi diagram object containing regions, 
+                                 vertices, and other spatial relationships.
         """
         if not self._vor:
-            self._vor = Voronoi(np.array(self.all_coordinates))
+            self._vor = Voronoi(self.all_features_gdf.geometry.get_coordinates().values)
         return self._vor
 
     @vor.setter
@@ -343,154 +347,235 @@ class AdjacencyEngine:
             if i != -1
         )
 
-    def _tag_feature_with_voronoi_vertices(self):
+    def _tag_geometries_with_voronoi_vertices(self):
         """
-        Tag each feature with the vertices of the voronoi region it belongs to. Runs the
-        voronoi analysis if it has not been done already. This is broken out mostly for testing.
-        Do not call this function directly.
+        Create mapping of geometries to their Voronoi vertices. Runs the voronoi analysis
+        if it has not been done already.
 
         Returns:
             None
         """
-        # We don't need to tag obstacles with their voronoi vertices
-        obstacle_coord_len = sum(len(feat.coords) for feat in self.obstacle_features)
+        # Initialize geometry-to-voronoi mapping
+        self._geometry_voronoi_vertices = {}
 
-        # Tag each feature with the vertices of the voronoi region it
-        # belongs to
-        for feature_coord_index in range(
-            len(self.all_coordinates) - obstacle_coord_len
-        ):
-            feature = self.get_feature_from_coord_index(feature_coord_index)
-            for i in self._get_voronoi_vertex_idx_for_coord_idx(feature_coord_index):
-                feature.voronoi_points.add(i)
+        # Iterate through ALL coordinates (since Voronoi is built from all coordinates)
+        # but only map non-obstacle geometries
+        total_coord_count = len(self.all_features_gdf.geometry.get_coordinates())
+        for feature_coord_index in range(total_coord_count):
+            dataframe_type, geometry_idx = self.get_geometry_from_coord_index(
+                feature_coord_index
+            )
+
+            # Only process non-obstacle geometries for adjacency mapping
+            if dataframe_type != "obstacle":
+                # Create key for this geometry
+                geom_key = (dataframe_type, geometry_idx)
+                if geom_key not in self._geometry_voronoi_vertices:
+                    self._geometry_voronoi_vertices[geom_key] = set()
+
+                # Add Voronoi vertices for this coordinate
+                for i in self._get_voronoi_vertex_idx_for_coord_idx(
+                    feature_coord_index
+                ):
+                    self._geometry_voronoi_vertices[geom_key].add(i)
 
     def _determine_adjacency(
-        self, source_set: Tuple[Feature], target_set: Tuple[Feature]
+        self,
+        source_gdf: gpd.GeoDataFrame,
+        target_gdf: gpd.GeoDataFrame,
+        source_type: str = "source",
+        target_type: str = "target",
     ):
         """
-        Determines the adjacency relationship between two sets of features.
+        Determines the adjacency relationship between two GeoDataFrames using vectorized operations.
+        Stores the result in self._adjacency_dict.
+
         Args:
-            source_set (Tuple[_Feature]): The set of source features.
-            target_set (Tuple[_Feature]): The set of target features.
+            source_gdf (gpd.GeoDataFrame): The source GeoDataFrame.
+            target_gdf (gpd.GeoDataFrame): The target GeoDataFrame.
+            source_type (str): Type identifier for source ('source', 'target', etc.)
+            target_type (str): Type identifier for target ('source', 'target', etc.')
 
         Returns:
             None
         """
+        # Early return if either GeoDataFrame is empty
+        if len(source_gdf) == 0 or len(target_gdf) == 0:
+            return
 
-        # Build an rtree for target features with optimized threshold
-        target_rtree = None
-        if (
-            self._use_spatial_index
-            and self._max_distance is not None
-            and len(target_set) > 3
-        ):
-            target_rtree = rtree.index.Index()
-            # Use cached bounds for better performance
-            for target_index, target_feature in enumerate(target_set):
-                target_rtree.insert(target_index, target_feature.bounds)
-
-        # Pre-filter sources by bounding rectangle if specified
+        # Apply bounding rectangle filter to both source and target at once
         if self._bounding_rectangle is not None:
-            valid_source_indices = [
-                i
-                for i, feature in enumerate(source_set)
-                if self._bounding_rectangle.intersects(feature.geometry)
-            ]
+            source_mask = source_gdf.geometry.intersects(self._bounding_rectangle)
+            target_mask = target_gdf.geometry.intersects(self._bounding_rectangle)
+            
+            valid_source_indices = source_gdf.index[source_mask].tolist()
+            valid_target_indices = target_gdf.index[target_mask].tolist()
+            
+            # Early return if no valid geometries
+            if not valid_source_indices or not valid_target_indices:
+                return
         else:
-            valid_source_indices = list(range(len(source_set)))
+            valid_source_indices = list(range(len(source_gdf)))
+            valid_target_indices = list(range(len(target_gdf)))
 
-        for source_index in valid_source_indices:
-            source_feature = source_set[source_index]
+        # Generate candidate pairs efficiently
+        if self._max_distance is not None:
+            # Spatial join for distance-constrained adjacency
+            src_buffered = source_gdf.iloc[valid_source_indices].copy()
+            src_buffered.geometry = src_buffered.geometry.buffer(self._max_distance)
+            src_buffered["src_idx"] = valid_source_indices
+            
+            tgt_indexed = target_gdf.iloc[valid_target_indices].assign(tgt_idx=valid_target_indices)
+            
+            pairs = gpd.sjoin(src_buffered, tgt_indexed, predicate="intersects")
+            if len(pairs) == 0:
+                return
+            
+            source_indices, target_indices = pairs["src_idx"].values, pairs["tgt_idx"].values
+        else:
+            # All-pairs approach using numpy broadcasting
+            source_indices, target_indices = np.meshgrid(valid_source_indices, valid_target_indices, indexing="ij")
+            source_indices, target_indices = source_indices.ravel(), target_indices.ravel()
 
-            # Get candidate target indices using spatial index if available
-            if target_rtree is not None:
-                # Use cached bounds for faster bbox calculation
-                bounds = source_feature.bounds
-                source_bbox = (
-                    bounds[0] - self._max_distance,
-                    bounds[1] - self._max_distance,
-                    bounds[2] + self._max_distance,
-                    bounds[3] + self._max_distance,
-                )
-                candidate_indices = list(target_rtree.intersection(source_bbox))
-            else:
-                candidate_indices = list(range(len(target_set)))
+        # Filter out same-geometry pairs for source-to-source adjacency
+        if source_gdf is target_gdf:
+            mask = source_indices != target_indices
+            source_indices = source_indices[mask]
+            target_indices = target_indices[mask]
 
-            # Batch process candidates for better performance
-            for target_index in candidate_indices:
-                target_feature = target_set[target_index]
+        # Voronoi adjacency check
+        for source_idx, target_idx in zip(source_indices, target_indices):
+            source_key = (source_type, int(source_idx))
+            target_key = (target_type, int(target_idx))
 
-                # Skip if same feature
-                if source_feature is target_feature:
-                    continue
+            # Check if both geometries have Voronoi vertices
+            if (source_key in self._geometry_voronoi_vertices and 
+                target_key in self._geometry_voronoi_vertices):
+                
+                source_voronoi = self._geometry_voronoi_vertices[source_key]
+                target_voronoi = self._geometry_voronoi_vertices[target_key]
 
-                if self._max_distance is not None:
-                    if (
-                        source_feature.geometry.distance(target_feature.geometry)
-                        > self._max_distance
-                    ):
-                        continue
-
-                # Bounding rectangle check for target
-                if (
-                    self._bounding_rectangle is not None
-                    and not self._bounding_rectangle.intersects(target_feature.geometry)
-                ):
-                    continue
-
-                # Finally check Voronoi adjacency
-                if source_feature._is_adjacent(
-                    target_feature, self._min_overlapping_voronoi_vertices
-                ):
-                    self._adjacency_dict[source_index].append(target_index)
+                # Check if they share enough Voronoi vertices
+                shared_vertices = len(source_voronoi.intersection(target_voronoi))
+                if shared_vertices >= self._min_overlapping_voronoi_vertices:
+                    self._adjacency_dict[int(source_idx)].append(int(target_idx))
 
     def get_adjacency_dict(self) -> Dict[int, List[int]]:
         """
-        Returns a dictionary of indices. They keys are the indices of feature_geoms. The values
-        are the indices of any target geometries which are adjacent to the feature_geoms.
+        Returns a dictionary of adjacency relationships by index.
+
+        The keys are the indices of source geometries. The values are lists of indices 
+        of target geometries that are adjacent to each source geometry.
 
         If no targets were specified, then calculate adjacency between source features and other
         source features.
 
         Returns:
-            dict (Dict[int, List[int]]): A dictionary of indices. The keys are the indices of feature_geoms. The
-            values are the indices of any adjacent features.
-
+            Dict[int, List[int]]: A dictionary mapping source geometry indices to lists of 
+                                adjacent target geometry indices.
         """
 
         """Note: We want adjacent features to have at least two overlapping vertices, otherwise we 
         might call the features adjacent when their Voronoi regions don't share any edges."""
 
         if self._adjacency_dict is None:
-            self._tag_feature_with_voronoi_vertices()
+            self._tag_geometries_with_voronoi_vertices()
 
-            # If any two features have any voronoi indices in common, then their voronoi regions
-            # must intersect, therefore the input features are adjacent.
+            # If any two geometries have shared voronoi vertices, then their voronoi regions
+            # intersect, therefore the input geometries are adjacent.
             self._adjacency_dict = defaultdict(list)
 
             # Get adjacency between source and target features
-            if len(self.target_features) > 0:
-                self._determine_adjacency(self.source_features, self.target_features)
+            if self.target_gdf is not None and len(self.target_gdf) > 0:
+                self._determine_adjacency(
+                    self.source_gdf, self.target_gdf, "source", "target"
+                )
             # If no target specified, get adjacency between source and other source features.
             else:
-                self._determine_adjacency(self.source_features, self.source_features)
+                self._determine_adjacency(
+                    self.source_gdf, self.source_gdf, "source", "source"
+                )
 
-        return self._adjacency_dict
+        # Convert numpy integers to regular Python integers to match return type annotation
+        return {
+            int(k): [int(v) for v in values]
+            for k, values in self._adjacency_dict.items()
+        }
+
+    def get_adjacency_gdf(self) -> Union[gpd.GeoDataFrame, None]:
+        """
+        Returns adjacency relationships as a GeoDataFrame with source and target geometries and attributes.
+
+        Returns:
+            gpd.GeoDataFrame or None: DataFrame with adjacency relationships including geometries and
+                                     any attributes from the original source/target GeoDataFrames.
+                                     Returns None if no adjacencies found.
+        """
+        adjacency_dict = self.get_adjacency_dict()
+
+        if not adjacency_dict or all(
+            len(targets) == 0 for targets in adjacency_dict.values()
+        ):
+            return None
+
+        # Prepare data for GeoDataFrame
+        rows = []
+
+        # Determine target set (targets if available, otherwise sources for source-source adjacency)
+        target_gdf = (
+            self.target_gdf if self.target_gdf is not None else self.source_gdf
+        )
+
+        for source_idx, target_list in adjacency_dict.items():
+            for target_idx in target_list:
+                source_geom = self.source_gdf.iloc[source_idx].geometry
+                target_geom = target_gdf.iloc[target_idx].geometry
+
+                row_data = {
+                    "source_idx": source_idx,
+                    "target_idx": target_idx,
+                    "source_geometry": source_geom,
+                    "target_geometry": target_geom,
+                    "geometry": source_geom,  # Primary geometry column
+                }
+
+                # Add source attributes
+                if len(self.source_gdf.columns) > 1:
+                    source_row = self.source_gdf.iloc[source_idx]
+                    for col in source_row.index:
+                        if col != "geometry":
+                            row_data[f"source_{col}"] = source_row[col]
+
+                # Add target attributes
+                if len(target_gdf.columns) > 1:
+                    target_row = target_gdf.iloc[target_idx]
+                    for col in target_row.index:
+                        if col != "geometry":
+                            row_data[f"target_{col}"] = target_row[col]
+
+                rows.append(row_data)
+
+        if not rows:
+            return None
+
+        return gpd.GeoDataFrame(rows)
 
     def plot_adjacency_dict(self) -> None:
         """
-        Plot the adjacency linkages between the source and target with pyplot. Runs the analysis if
-        it has not already been run.
+        Plot the adjacency linkages between source and target geometries using matplotlib.
+        
+        Runs the adjacency analysis if it has not already been run. Shows source geometries 
+        in grey, target geometries in blue, obstacles in red, and adjacency links in green.
 
         Returns:
             None
         """
         # Plot the adjacency linkages between the source and target
-        if len(self.target_features) > 0:
+        if self.target_gdf is not None and len(self.target_gdf) > 0:
             for source_i, target_is in self.get_adjacency_dict().items():
-                source_poly = self.source_features[source_i].geometry
+                source_poly = self.source_gdf.iloc[source_i].geometry
                 target_polys = [
-                    self.target_features[target_i].geometry for target_i in target_is
+                    self.target_gdf.iloc[target_i].geometry for target_i in target_is
                 ]
 
                 # Plot the linestrings between the source and target polygons
@@ -500,7 +585,7 @@ class AdjacencyEngine:
                         try:
                             links.append(
                                 LineString(
-                                    shapely.ops.nearest_points(target_poly, source_poly)
+                                    shapely_ops.nearest_points(target_poly, source_poly)
                                 )
                             )
                         except ValueError:
@@ -511,9 +596,9 @@ class AdjacencyEngine:
         # If no target specified, get adjacency between source and other source features.
         else:
             for source_i, source_2_is in self.get_adjacency_dict().items():
-                source_poly = self.source_features[source_i].geometry
+                source_poly = self.source_gdf.iloc[source_i].geometry
                 target_polys = [
-                    self.source_features[source_2_i].geometry
+                    self.source_gdf.iloc[source_2_i].geometry
                     for source_2_i in source_2_is
                     if source_2_i > source_i
                 ]
@@ -526,9 +611,18 @@ class AdjacencyEngine:
                 ]
                 add_geometry_to_plot(links, "green")
 
-        add_geometry_to_plot([t.geometry for t in self.target_features], "blue")
-        add_geometry_to_plot([t.geometry for t in self.source_features], "grey")
-        add_geometry_to_plot([t.geometry for t in self.obstacle_features], "red")
+        # Plot all geometries
+        target_geoms = (
+            list(self.target_gdf.geometry) if self.target_gdf is not None else []
+        )
+        source_geoms = list(self.source_gdf.geometry)
+        obstacle_geoms = (
+            list(self.obstacle_gdf.geometry) if self.obstacle_gdf is not None else []
+        )
+
+        add_geometry_to_plot(target_geoms, "blue")
+        add_geometry_to_plot(source_geoms, "grey")
+        add_geometry_to_plot(obstacle_geoms, "red")
 
         plt.title("Adjacency linkages between source and target")
         plt.xlabel("Longitude")

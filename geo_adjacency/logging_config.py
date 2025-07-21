@@ -23,33 +23,33 @@ def setup_logger(
         level (int): Logging level (default: logging.WARNING)
         console_format (Optional[str]): Custom format string for console output
         file_format (Optional[str]): Custom format string for file output
-    
+
     Returns:
         logging.Logger: Configured logger instance
     """
     logger = logging.getLogger(name)
-    
+
     # Prevent adding duplicate handlers
     if logger.handlers:
         return logger
-    
+
     # Set default formats if not provided
     if console_format is None:
         console_format = "%(name)s - %(levelname)s - %(message)s"
-    
+
     if file_format is None:
         file_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
+
     # Create console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
-    
+
     # Create formatters
     console_formatter = logging.Formatter(console_format)
     console_handler.setFormatter(console_formatter)
-    
+
     # Add handlers to logger
     logger.addHandler(console_handler)
     logger.setLevel(level)
-    
+
     return logger
