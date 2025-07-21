@@ -627,7 +627,7 @@ def test_max_segment_length_without_densify_error():
     
     source_geoms = [Point(0, 0), Point(1, 0)]
     
-    with pytest.raises(ValueError, match="interpolate_points must be True"):
+    with pytest.raises(ValueError, match="densify_features must be True if max_segment_length is not None"):
         AdjacencyEngine(
             source_geoms, 
             densify_features=False, 
