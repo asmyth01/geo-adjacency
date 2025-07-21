@@ -5,7 +5,6 @@ without explicit importing.
 
 import pytest
 from shapely.wkt import loads
-from geo_adjacency.adjacency import _Feature
 
 # A list of rectangular polygon WKTs with a small space between each. Order is clockwise
 source_wkts = [
@@ -27,7 +26,7 @@ target_wkts = [
     "POLYGON((15 2, 15 3, 17 3, 17 2, 15 2))",
     "POLYGON((18 2, 18 3, 20 3, 20 2, 18 2))",
     "LINESTRING(21 2, 26 2)",  # i[1] == 46
-    "MULTIPOLYGON(((27 2, 27 3, 29 3, 29 2, 27 2)), ((30 2, 30 3, 32 3, 32 2, 30 2)))"
+    "MULTIPOLYGON(((27 2, 27 3, 29 3, 29 2, 27 2)), ((30 2, 30 3, 32 3, 32 2, 30 2)))",
 ]
 
 # A linestring that will serve as an obstacle.
@@ -61,11 +60,3 @@ def point_geom_a():
 @pytest.fixture
 def point_geom_b():
     return loads("POINT (10 10)")
-
-@pytest.fixture
-def point_feature_a(point_geom_a):
-    return _Feature(point_geom_a)
-
-@pytest.fixture
-def point_feature_b(point_geom_b):
-    return _Feature(point_geom_b)

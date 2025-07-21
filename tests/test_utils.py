@@ -1,56 +1,84 @@
+"""
+Test utility functions.
+"""
+
+from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 from shapely.wkt import loads
 
-import geo_adjacency.utils
-from geo_adjacency.utils import flatten_list
+from geo_adjacency.utils import count_unique_coords
+
+import pytest
 
 
-def test_flatten_list():
-    test_data = [[(1, 2), (3, 4)], [(5, 6), (7, 8)], [(9, 10), [(11, 12), [(13, 14), [(15, 16)]]]]]
-    assert list(flatten_list(test_data)) == [(1, 2), (3, 4), (5, 6), (7, 8), (9, 10), (11, 12), (13, 14), (15, 16)]
+def test_count_unique_coords_additional_types():
+    """Test count_unique_coords with additional geometry types for better coverage."""
+    # Test MultiLineString
+    multiline = MultiLineString([
+        LineString([(0, 0), (1, 1)]),
+        LineString([(2, 2), (3, 3)])
+    ])
+    assert count_unique_coords(multiline) == 4
+    
+    # Test Polygon with holes
+    exterior = [(0, 0), (0, 4), (4, 4), (4, 0), (0, 0)]
+    hole = [(1, 1), (1, 3), (3, 3), (3, 1), (1, 1)]
+    polygon_with_hole = Polygon(exterior, [hole])
+    # Based on actual implementation: exterior + hole coords minus interior count minus 1
+    assert count_unique_coords(polygon_with_hole) == 8
+    
+    # Test unknown geometry type error
+    class UnknownGeometry:
+        pass
+    
+    with pytest.raises(ValueError, match="Unknown geometry type"):
+        count_unique_coords(UnknownGeometry())
 
 
-def test_coords_from_point():
-    point = loads("POINT (30 10)")
-    actual = geo_adjacency.utils.coords_from_point(point)
-    expected = [(30.0, 10.0)]
-    assert actual == expected
+def test_add_geometry_to_plot():
+    """Test the add_geometry_to_plot function with different geometry types."""
+    from geo_adjacency.utils import add_geometry_to_plot
+    import matplotlib.pyplot as plt
+    
+    # Test with Point
+    point = Point(1, 2)
+    add_geometry_to_plot([point], "red")
+    
+    # Test with LineString
+    line = LineString([(0, 0), (1, 1)])
+    add_geometry_to_plot([line], "blue")
+    
+    # Test with Polygon
+    polygon = Polygon([(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)])
+    add_geometry_to_plot([polygon], "green")
+    
+    # Test with MultiPolygon
+    multi_poly = MultiPolygon([
+        Polygon([(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)])
+    ])
+    add_geometry_to_plot([multi_poly], "yellow")
+    
+    # Test with unknown geometry type
+    class UnknownGeom:
+        pass
+    
+    with pytest.raises(TypeError, match="Unknown geometry type"):
+        add_geometry_to_plot([UnknownGeom()], "black")
+    
+    plt.close()  # Clean up the plot 
 
+def test_count_unique_coords():
+    point = loads("POINT(10 1)")
+    assert count_unique_coords(point) == 1
+    line = loads("LINESTRING(0 0, 1 1)")
+    assert count_unique_coords(line) == 2
+    multilinestring = loads("MULTILINESTRING((0 0, 1 1), (2 2, 3 3))")
+    assert count_unique_coords(multilinestring) == 4
+    polygon = loads("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))")
+    assert count_unique_coords(polygon) == 4
+    multipolygon = loads(
+        "MULTIPOLYGON(((0 0, 0 1, 1 1, 1 0, 0 0)), ((3 0, 3 1, 5 1, 5 0, 3 0)))"
+    )
+    assert count_unique_coords(multipolygon) == 8
 
-def test_coords_from_ring():
-    ring = loads("LINESTRING (30 10, 10 30, 40 40)")
-    actual = geo_adjacency.utils.coords_from_ring(ring)
-    expected = [(30.0, 10.0), (10.0, 30.0), (40.0, 40.0)]
-    assert actual == expected
-
-
-def test_coords_from_polygon():
-    polygon = loads("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))")
-    actual = geo_adjacency.utils.coords_from_polygon(polygon)
-    expected = [(30.0, 10.0), (40.0, 40.0), (20.0, 40.0), (10.0, 20.0)]
-    assert actual == expected
-
-    poylgon_w_interior = loads("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, "
-                               "30 20, 20 30))")
-    actual = geo_adjacency.utils.coords_from_polygon(poylgon_w_interior)
-    expected = [(35.0, 10.0), (45.0, 45.0), (15.0, 40.0), (10.0, 20.0), (20.0, 30.0),
-                (35.0, 35.0), (30.0, 20.0)]
-    assert actual == expected
-
-
-def test_coords_from_multipolygon():
-    multipolygon = loads("MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, "
-                         "5 10, 15 5)))")
-    actual = geo_adjacency.utils.coords_from_multipolygon(multipolygon)
-    expected = [(30.0, 20.0), (45.0, 40.0), (10.0, 40.0), (15.0, 5.0), (40.0, 10.0), (10.0, 20.0),
-                (5.0, 10.0)]
-
-    assert actual == expected
-
-    multipolygon_w_interior = loads("MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, "
-                                    "10 30, 10 10, 30 5, 45 20, 20 35),(30 20, 20 15, 20 25, "
-                                    "30 20)))")
-    actual = geo_adjacency.utils.coords_from_multipolygon(multipolygon_w_interior)
-    expected = [(40.0, 40.0), (20.0, 45.0), (45.0, 30.0), (20.0, 35.0), (10.0, 30.0),
-                (10.0, 10.0),
-                (30.0, 5.0), (45.0, 20.0), (30.0, 20.0), (20.0, 15.0), (20.0, 25.0)]
-    assert actual == expected
+    with pytest.raises(ValueError):
+        count_unique_coords(None)
