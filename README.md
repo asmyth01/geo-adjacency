@@ -13,7 +13,7 @@ Recommended installation is with [pip](https://pypi.org/project/pip/):
 ```python -m pip install geo-adjacency```
 
 ## Build from source
-You must have Python <3.13,>=3.9 installed.
+You must have Python 3.10-3.14 installed.
 ```
 $ git clone git@github.com:asmyth01/geo-adjacency.git
 $ cd geo-adjacency
